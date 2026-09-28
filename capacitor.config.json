@@ -1,0 +1,14 @@
+{
+  "appId": "com.alain.visuales",
+  "appName": "Visuales",
+  "webDir": "dist",
+  "server": {
+    "androidScheme": "https",
+    "cleartext": false
+  },
+  "plugins": {
+    "CapacitorHttp": {
+      "enabled": true
+    }
+  }
+}
