@@ -1,6 +1,6 @@
-// @visuales-capacitor-api-v2
+// @visuales-api-v3
 import { Capacitor } from '@capacitor/core';
-import { CapacitorHttp } from '@capacitor-community/http';
+import { CapacitorHttp } from '@capacitor/core';
 import { parseApacheListing } from './scraper.js';
 
 const VISUALES_BASE = 'https://visuales.uclv.cu';
@@ -19,13 +19,9 @@ export function setBase(url) {
   localStorage.setItem(LS_KEY, (url || '').trim().replace(/\/$/, ''));
 }
 
-export function getBaseUrl() {
-  return getBase();
-}
-
-export function isNative() {
-  return IS_NATIVE;
-}
+export function getBaseUrl() { return getBase(); }
+export function isNative() { return IS_NATIVE; }
+export function getDirectUrl(path) { return getBase() + path; }
 
 async function fetchText(url) {
   if (IS_NATIVE) {
@@ -61,6 +57,17 @@ export async function listDirectory(path) {
   return { path, count: entries.length, entries };
 }
 
-export function getDirectUrl(path) {
-  return getBase() + path;
+export async function getFileSize(url) {
+  if (IS_NATIVE) {
+    const res = await CapacitorHttp.request({
+      url,
+      method: 'HEAD',
+      responseType: 'text'
+    });
+    const len = res.headers && res.headers['content-length'];
+    return len ? parseInt(len, 10) : 0;
+  }
+  const res = await fetch(url, { method: 'HEAD' });
+  const len = res.headers.get('Content-Length');
+  return len ? parseInt(len, 10) : 0;
 }

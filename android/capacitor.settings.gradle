@@ -2,8 +2,8 @@
 include ':capacitor-android'
 project(':capacitor-android').projectDir = new File('../node_modules/@capacitor/android/capacitor')
 
-include ':capacitor-community-http'
-project(':capacitor-community-http').projectDir = new File('../node_modules/@capacitor-community/http/android')
-
 include ':capacitor-file-transfer'
 project(':capacitor-file-transfer').projectDir = new File('../node_modules/@capacitor/file-transfer/android')
+
+include ':capgo-capacitor-downloader'
+project(':capgo-capacitor-downloader').projectDir = new File('../node_modules/@capgo/capacitor-downloader/android')
