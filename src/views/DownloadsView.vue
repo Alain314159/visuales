@@ -1,15 +1,16 @@
 <script setup>
-import { onMounted, computed } from 'vue';
+import { onMounted, computed, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useDownloadsStore } from '../stores/downloads';
 import { getDirectUrl } from '../lib/api';
 import {
-  Download, Pause, Play, Trash2, Check, X, Loader2, FolderDown, ListX
+  Download, Pause, Play, Trash2, Check, X, Loader2, FolderDown, ListX, Film, FolderOpen
 } from 'lucide-vue-next';
 
 const route = useRoute();
 const router = useRouter();
 const store = useDownloadsStore();
+const playing = ref(null);
 
 onMounted(async () => {
   await store.load();
@@ -17,7 +18,13 @@ onMounted(async () => {
     const path = String(route.query.url);
     const name = String(route.query.name);
     const size = parseInt(route.query.size || '0', 10);
-    await store.enqueue({ url: getDirectUrl(path), name, size });
+    const subPath = String(route.query.sub || '');
+    await store.enqueue({
+      url: getDirectUrl(path),
+      name,
+      size,
+      subtitleUrl: subPath ? getDirectUrl(subPath) : null
+    });
     router.replace({ name: 'downloads' });
   }
 });
@@ -30,8 +37,18 @@ function fmtSize(b) {
   return b + ' B';
 }
 
-function fmtSpeed(bytesDone, item) {
-  return '';
+async function play(item) {
+  playing.value = item.id;
+  try {
+    const { FileOpener } = await import('@capawesome-team/capacitor-file-opener');
+    const info = await CapacitorDownloader.getFileInfo({ id: item.id });
+    if (info && info.path) {
+      await FileOpener.open({ filePath: info.path, contentType: 'video/*' });
+    }
+  } catch (e) {
+    console.warn('play:', e);
+  }
+  playing.value = null;
 }
 
 const items = computed(() => store.items);
@@ -70,16 +87,20 @@ const items = computed(() => store.items);
         <div class="row">
           <span class="meta">
             {{ fmtSize(d.size) }} · {{ d.progress || 0 }}%
+            <template v-if="d.retries"> · reintento {{ d.retries }}</template>
             <template v-if="d.error"> · {{ d.error }}</template>
           </span>
           <div class="actions">
+            <button v-if="d.status === 'completed'" @click="play(d)" :disabled="playing === d.id" title="Reproducir">
+              <Film :size="16" /> Reproducir
+            </button>
             <button v-if="d.status === 'downloading'" @click="store.pause(d.id)" title="Pausar">
               <Pause :size="16" />
             </button>
             <button v-else-if="d.status === 'paused'" @click="store.resume(d.id)" title="Reanudar">
               <Play :size="16" />
             </button>
-            <button @click="store.remove(d.id)" title="Borrar de la lista">
+            <button @click="store.remove(d.id)" title="Borrar">
               <Trash2 :size="16" />
             </button>
           </div>
@@ -110,5 +131,5 @@ const items = computed(() => store.items);
 .fill.err { background: var(--danger); }
 .row { display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: var(--muted); }
 .actions { display: flex; gap: 4px; }
-.actions button { background: transparent; border: none; padding: 4px; color: var(--text); }
+.actions button { background: transparent; border: none; padding: 4px; color: var(--text); display: inline-flex; align-items: center; gap: 4px; font-size: 12px; }
 </style>

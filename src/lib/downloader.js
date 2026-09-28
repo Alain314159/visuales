@@ -1,6 +1,5 @@
-// @visuales-downloader-v1
+// @visuales-downloader-v3
 import { CapacitorDownloader } from '@capgo/capacitor-downloader';
-import { Directory } from '@capacitor/filesystem';
 
 let listenersReady = false;
 let progressHandler = null;
@@ -26,28 +25,39 @@ export function initDownloader({ onProgress, onCompleted, onFailed }) {
   });
 }
 
-export async function startDownload({ id, url, filename }) {
+export async function startDownload({ id, url, filename, connections = 8 }) {
   return await CapacitorDownloader.download({
     id,
     url,
+    fileName: filename,
     location: 'Visuales',
-    fileName: filename
+    connections
   });
 }
 
 export async function pauseDownload(id) {
   try { return await CapacitorDownloader.pause({ id }); }
-  catch (e) { console.warn('pause no soportado:', e); }
+  catch (e) { console.warn('pause:', e); }
 }
 
 export async function resumeDownload(id) {
   try { return await CapacitorDownloader.resume({ id }); }
-  catch (e) { console.warn('resume no soportado:', e); }
+  catch (e) { console.warn('resume:', e); }
 }
 
 export async function cancelDownload(id) {
   try { return await CapacitorDownloader.stop({ id }); }
-  catch (e) { console.warn('stop no soportado:', e); }
+  catch (e) { console.warn('stop:', e); }
+}
+
+export async function checkStatus(id) {
+  try { return await CapacitorDownloader.checkStatus({ id }); }
+  catch { return null; }
+}
+
+export async function getFileInfo(id) {
+  try { return await CapacitorDownloader.getFileInfo({ id }); }
+  catch { return null; }
 }
 
 export async function listNativeDownloads() {

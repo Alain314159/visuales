@@ -8,5 +8,14 @@ project(':capacitor-file-transfer').projectDir = new File('../node_modules/@capa
 include ':capacitor-filesystem'
 project(':capacitor-filesystem').projectDir = new File('../node_modules/@capacitor/filesystem/android')
 
+include ':capacitor-local-notifications'
+project(':capacitor-local-notifications').projectDir = new File('../node_modules/@capacitor/local-notifications/android')
+
+include ':capawesome-team-capacitor-file-opener'
+project(':capawesome-team-capacitor-file-opener').projectDir = new File('../node_modules/@capawesome-team/capacitor-file-opener/android')
+
 include ':capgo-capacitor-downloader'
 project(':capgo-capacitor-downloader').projectDir = new File('../node_modules/@capgo/capacitor-downloader/android')
+
+include ':capacitor-blob-writer'
+project(':capacitor-blob-writer').projectDir = new File('../node_modules/capacitor-blob-writer/android')

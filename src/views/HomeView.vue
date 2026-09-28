@@ -1,7 +1,8 @@
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
-import { listDirectory } from '../lib/api';
+import { listDirectory, getDirectUrl } from '../lib/api';
+import { loadPoster } from '../lib/poster';
 import {
   Folder, Film, FileText, Image, Archive, Music, File, ChevronRight,
   Home, RefreshCw, Search, Download, Loader2
@@ -13,6 +14,7 @@ const entries = ref([]);
 const loading = ref(false);
 const error = ref('');
 const search = ref('');
+const posters = ref({});
 
 const breadcrumbs = computed(() => {
   if (currentPath.value === '/') return [{ name: 'Inicio', path: '/' }];
@@ -58,6 +60,15 @@ async function load(path) {
     entries.value = data.entries.filter(e => e.type !== 'parent');
     currentPath.value = path;
     search.value = '';
+    posters.value = {};
+    for (const e of entries.value) {
+      if (e.type === 'image' && e.name.toLowerCase().includes('poster')) {
+        const parent = e.path.substring(0, e.path.lastIndexOf('/'));
+        loadPoster(getDirectUrl(e.path)).then(url => {
+          if (url) posters.value[parent] = url;
+        });
+      }
+    }
   } catch (e) {
     error.value = String(e.message || e);
   } finally {
@@ -65,18 +76,32 @@ async function load(path) {
   }
 }
 
+function findSubtitle(videoPath) {
+  const base = videoPath.replace(/\.[^.]+$/, '');
+  return entries.value.find(e =>
+    e.type === 'text' && e.name.toLowerCase().endsWith('.srt') &&
+    e.path.replace(/\.[^.]+$/, '') === base
+  );
+}
+
 function openEntry(entry) {
   if (entry.type === 'dir') {
     load(entry.path);
   } else {
+    const sub = entry.type === 'video' ? findSubtitle(entry.path) : null;
     router.push({
       name: 'downloads',
-      query: { url: entry.path, name: entry.name, size: entry.size }
+      query: {
+        url: entry.path,
+        name: entry.name,
+        size: entry.size,
+        sub: sub ? sub.path : ''
+      }
     });
   }
 }
 
-load('/');
+onMounted(() => { load('/'); });
 </script>
 
 <template>
@@ -103,7 +128,11 @@ load('/');
 
     <ul v-else class="entries">
       <li v-for="e in filtered" :key="e.path" @click="openEntry(e)" class="entry">
-        <component :is="iconFor(e)" :size="22" class="ico" :class="e.type" />
+        <div v-if="e.type === 'dir' && posters[e.path]" class="poster-wrap">
+          <img :src="posters[e.path]" class="poster" loading="lazy" />
+          <Folder :size="18" class="folder-badge" />
+        </div>
+        <component v-else :is="iconFor(e)" :size="22" class="ico" :class="e.type" />
         <div class="info">
           <span class="name">{{ e.name }}</span>
           <span class="meta">{{ e.modified }}<template v-if="e.size"> · {{ formatSize(e.size) }}</template></span>
@@ -129,6 +158,9 @@ load('/');
 .entries { list-style: none; padding: 0; margin: 0; }
 .entry { display: flex; align-items: center; gap: 12px; padding: 12px 8px; border-bottom: 1px solid var(--border); cursor: pointer; }
 .entry:active { background: var(--panel); }
+.poster-wrap { position: relative; width: 44px; height: 60px; flex-shrink: 0; border-radius: 6px; overflow: hidden; background: var(--panel-2); }
+.poster { width: 100%; height: 100%; object-fit: cover; }
+.folder-badge { position: absolute; bottom: 2px; right: 2px; color: white; background: rgba(0,0,0,0.6); border-radius: 3px; padding: 1px; }
 .ico { flex-shrink: 0; color: var(--muted); }
 .ico.dir { color: var(--accent); }
 .ico.video { color: #f472b6; }
