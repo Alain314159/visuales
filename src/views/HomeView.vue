@@ -3,18 +3,22 @@ import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { listDirectory, getDirectUrl } from '../lib/api';
 import { loadPoster } from '../lib/poster';
+import { db } from '../db';
+import { useDownloadsStore } from '../stores/downloads';
 import {
   Folder, Film, FileText, Image, Archive, Music, File, ChevronRight,
-  Home, RefreshCw, Search, Download, Loader2
+  Home, RefreshCw, Search, Download, Loader2, ListPlus
 } from 'lucide-vue-next';
 
 const router = useRouter();
+const downloads = useDownloadsStore();
 const currentPath = ref('/');
 const entries = ref([]);
 const loading = ref(false);
 const error = ref('');
 const search = ref('');
 const posters = ref({});
+const offline = ref(false);
 
 const breadcrumbs = computed(() => {
   if (currentPath.value === '/') return [{ name: 'Inicio', path: '/' }];
@@ -34,6 +38,8 @@ const filtered = computed(() => {
   return entries.value.filter(e => e.name.toLowerCase().includes(q));
 });
 
+const videoCount = computed(() => entries.value.filter(e => e.type === 'video').length);
+
 function iconFor(entry) {
   if (entry.type === 'dir') return Folder;
   if (entry.type === 'video') return Film;
@@ -44,33 +50,40 @@ function iconFor(entry) {
   return File;
 }
 
-function formatSize(bytes) {
-  if (!bytes) return '';
-  if (bytes >= 1073741824) return (bytes / 1073741824).toFixed(2) + ' GB';
-  if (bytes >= 1048576) return (bytes / 1048576).toFixed(1) + ' MB';
-  if (bytes >= 1024) return (bytes / 1024).toFixed(0) + ' KB';
-  return bytes + ' B';
+function formatSize(b) {
+  if (!b) return '';
+  if (b >= 1073741824) return (b / 1073741824).toFixed(2) + ' GB';
+  if (b >= 1048576) return (b / 1048576).toFixed(1) + ' MB';
+  if (b >= 1024) return (b / 1024).toFixed(0) + ' KB';
+  return b + ' B';
 }
 
 async function load(path) {
   loading.value = true;
   error.value = '';
+  offline.value = false;
   try {
     const data = await listDirectory(path);
     entries.value = data.entries.filter(e => e.type !== 'parent');
     currentPath.value = path;
     search.value = '';
     posters.value = {};
+    await db.catalogCache.put({ path, entries: entries.value, fetchedAt: Date.now() });
     for (const e of entries.value) {
       if (e.type === 'image' && e.name.toLowerCase().includes('poster')) {
         const parent = e.path.substring(0, e.path.lastIndexOf('/'));
-        loadPoster(getDirectUrl(e.path)).then(url => {
-          if (url) posters.value[parent] = url;
-        });
+        loadPoster(getDirectUrl(e.path)).then(url => { if (url) posters.value[parent] = url; });
       }
     }
   } catch (e) {
-    error.value = String(e.message || e);
+    const cached = await db.catalogCache.get(path);
+    if (cached) {
+      entries.value = cached.entries;
+      currentPath.value = path;
+      offline.value = true;
+    } else {
+      error.value = String(e.message || e);
+    }
   } finally {
     loading.value = false;
   }
@@ -91,14 +104,25 @@ function openEntry(entry) {
     const sub = entry.type === 'video' ? findSubtitle(entry.path) : null;
     router.push({
       name: 'downloads',
-      query: {
-        url: entry.path,
-        name: entry.name,
-        size: entry.size,
-        sub: sub ? sub.path : ''
-      }
+      query: { url: entry.path, name: entry.name, size: entry.size, sub: sub ? sub.path : '' }
     });
   }
+}
+
+async function downloadAll() {
+  const videos = entries.value.filter(e => e.type === 'video');
+  if (!videos.length) return;
+  const batch = videos.map(v => {
+    const sub = findSubtitle(v.path);
+    return {
+      url: getDirectUrl(v.path),
+      name: v.name,
+      size: v.size,
+      subtitleUrl: sub ? getDirectUrl(sub.path) : null
+    };
+  });
+  await downloads.enqueueBatch(batch);
+  router.push({ name: 'downloads' });
 }
 
 onMounted(() => { load('/'); });
@@ -122,6 +146,13 @@ onMounted(() => { load('/'); });
       </button>
     </div>
 
+    <div v-if="videoCount > 0" class="batch">
+      <button class="primary" @click="downloadAll">
+        <ListPlus :size="18" /> Descargar todos ({{ videoCount }})
+      </button>
+    </div>
+
+    <p v-if="offline" class="offline">Sin conexión — mostrando caché</p>
     <p v-if="error" class="error">{{ error }}</p>
 
     <div v-if="loading" class="loading"><Loader2 :size="32" class="spin" /></div>
@@ -148,13 +179,16 @@ onMounted(() => { load('/'); });
 .crumbs { display: flex; flex-wrap: wrap; align-items: center; gap: 2px; margin-bottom: 12px; font-size: 13px; }
 .crumb { display: inline-flex; align-items: center; gap: 4px; background: transparent; border: none; color: var(--accent); padding: 4px 6px; font-size: 13px; }
 .crumb .sep { color: var(--muted); }
-.searchbar { display: flex; align-items: center; gap: 8px; background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 6px 12px; margin-bottom: 16px; }
+.searchbar { display: flex; align-items: center; gap: 8px; background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 6px 12px; margin-bottom: 12px; }
 .searchbar input { background: transparent; border: none; padding: 6px 0; }
 .searchbar .refresh { background: transparent; border: none; padding: 4px; }
+.batch { margin-bottom: 12px; }
+.batch button { width: 100%; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
 .spin { animation: spin 1s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 .loading { display: flex; justify-content: center; padding: 40px; color: var(--accent); }
 .error { color: var(--danger); margin-bottom: 12px; }
+.offline { color: #f59e0b; margin-bottom: 12px; font-size: 13px; }
 .entries { list-style: none; padding: 0; margin: 0; }
 .entry { display: flex; align-items: center; gap: 12px; padding: 12px 8px; border-bottom: 1px solid var(--border); cursor: pointer; }
 .entry:active { background: var(--panel); }

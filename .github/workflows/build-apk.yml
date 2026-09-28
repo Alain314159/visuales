@@ -39,20 +39,38 @@ jobs:
       - name: Sync Capacitor
         run: npx cap sync android
 
+      - name: Make gradlew executable
+        run: chmod +x android/gradlew
+
       - name: Build APK (debug)
         working-directory: android
-        run: ./gradlew assembleDebug --no-daemon
+        run: ./gradlew assembleDebug --no-daemon --stacktrace
 
-      - name: Prepare APK artifact
+      - name: Locate APK
+        id: locate
         run: |
+          echo "=== Buscando APKs ==="
+          find android -name "*.apk" -type f -exec ls -la {} \;
+          APK_PATH=$(find android -name "app-debug.apk" -type f | head -1)
+          if [ -z "$APK_PATH" ]; then
+            APK_PATH=$(find android -name "*.apk" -type f | head -1)
+          fi
+          if [ -z "$APK_PATH" ]; then
+            echo "❌ NO SE ENCONTRO NINGUN APK"
+            exit 1
+          fi
+          echo "✅ APK encontrado: $APK_PATH"
+          echo "apk_path=$APK_PATH" >> $GITHUB_OUTPUT
           mkdir -p artifacts
-          cp android/app/build/outputs/apk/debug/app-debug.apk artifacts/visuales-${{ github.sha }}.apk
+          cp "$APK_PATH" artifacts/visuales.apk
+          ls -la artifacts/
 
-      - uses: actions/upload-artifact@v4
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
         with:
           name: visuales-apk
-          path: artifacts/*.apk
-          retention-days: 30
+          path: artifacts/visuales.apk
+          retention-days: 90
 
       - name: Create Release
         if: github.ref == 'refs/heads/main'
@@ -60,7 +78,9 @@ jobs:
         with:
           tag_name: build-${{ github.run_number }}
           name: Build ${{ github.run_number }}
-          files: artifacts/*.apk
+          files: artifacts/visuales.apk
           generate_release_notes: true
           draft: false
           prerelease: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

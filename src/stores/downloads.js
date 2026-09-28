@@ -1,23 +1,18 @@
 import { defineStore } from 'pinia';
 import { db } from '../db';
 import {
-  initDownloader,
-  startDownload,
-  pauseDownload,
-  resumeDownload,
-  cancelDownload
+  initDownloader, startDownload, pauseDownload, resumeDownload, cancelDownload, checkStatus
 } from '../lib/downloader';
 import { notifyProgress, notifyDone, ensurePermission } from '../lib/notify';
 
 let listenersBound = false;
-const MAX_CONCURRENT = 2;
 const MAX_RETRIES = 3;
 
 export const useDownloadsStore = defineStore('downloads', {
   state: () => ({
     items: [],
     loaded: false,
-    settings: { connections: 8, maxConcurrent: MAX_CONCURRENT, autoSubtitles: true }
+    settings: { connections: 8, maxConcurrent: 2, autoSubtitles: true }
   }),
   getters: {
     active: (s) => s.items.filter(d => d.status === 'downloading' || d.status === 'paused'),
@@ -37,12 +32,35 @@ export const useDownloadsStore = defineStore('downloads', {
       });
     },
 
+    loadSettings() {
+      try {
+        const s = JSON.parse(localStorage.getItem('visuales.dlSettings') || '{}');
+        if (s.connections) this.settings.connections = s.connections;
+        if (s.maxConcurrent) this.settings.maxConcurrent = s.maxConcurrent;
+        if (typeof s.autoSubtitles === 'boolean') this.settings.autoSubtitles = s.autoSubtitles;
+      } catch {}
+    },
+
     async load() {
       if (this.loaded) return;
+      this.loadSettings();
       this.items = await db.downloads.orderBy('createdAt').reverse().toArray();
       this.loaded = true;
       this.bindListeners();
+      await this._rehydrate();
       this._processQueue();
+    },
+
+    async _rehydrate() {
+      for (const item of this.items) {
+        if (item.status === 'downloading') {
+          const st = await checkStatus(item.id);
+          if (!st || !st.isDownloading) {
+            item.status = 'paused';
+            await db.downloads.update(item.id, { status: 'paused' });
+          }
+        }
+      }
     },
 
     async enqueue({ url, name, size, subtitleUrl }) {
@@ -59,23 +77,28 @@ export const useDownloadsStore = defineStore('downloads', {
       return id;
     },
 
+    async enqueueBatch(entries) {
+      let n = 0;
+      for (const e of entries) {
+        await this.enqueue(e);
+        n++;
+      }
+      return n;
+    },
+
     async _processQueue() {
       const running = this.items.filter(d => d.status === 'downloading').length;
       const slots = this.settings.maxConcurrent - running;
       if (slots <= 0) return;
       const next = this.items.filter(d => d.status === 'queued').slice(0, slots);
-      for (const item of next) {
-        await this._startOne(item);
-      }
+      for (const item of next) await this._startOne(item);
     },
 
     async _startOne(item) {
       try {
         await this.updateStatus(item.id, 'downloading', 0);
         await startDownload({
-          id: item.id,
-          url: item.url,
-          filename: item.name,
+          id: item.id, url: item.url, filename: item.name,
           connections: this.settings.connections
         });
       } catch (e) {
@@ -84,22 +107,9 @@ export const useDownloadsStore = defineStore('downloads', {
       }
     },
 
-    async pause(id) {
-      await pauseDownload(id);
-      await this.updateStatus(id, 'paused');
-    },
-
-    async resume(id) {
-      const item = this.items.find(d => d.id === id);
-      if (!item) return;
-      await this.updateStatus(id, 'queued');
-      this._processQueue();
-    },
-
-    async cancel(id) {
-      await cancelDownload(id);
-      await this.remove(id);
-    },
+    async pause(id) { await pauseDownload(id); await this.updateStatus(id, 'paused'); },
+    async resume(id) { await this.updateStatus(id, 'queued'); this._processQueue(); },
+    async cancel(id) { await cancelDownload(id); await this.remove(id); },
 
     async remove(id) {
       this.items = this.items.filter(d => d.id !== id);
@@ -140,9 +150,7 @@ export const useDownloadsStore = defineStore('downloads', {
       await this.updateStatus(id, 'completed', 100);
       if (item) {
         notifyDone(id, item.name);
-        if (item.subtitleUrl && this.settings.autoSubtitles) {
-          this._downloadSubtitle(item);
-        }
+        if (item.subtitleUrl && this.settings.autoSubtitles) this._downloadSubtitle(item);
       }
       this._processQueue();
     },
@@ -164,12 +172,7 @@ export const useDownloadsStore = defineStore('downloads', {
     async _downloadSubtitle(item) {
       try {
         const subName = item.name.replace(/\.[^.]+$/, '.srt');
-        await startDownload({
-          id: item.id + '_sub',
-          url: item.subtitleUrl,
-          filename: subName,
-          connections: 2
-        });
+        await startDownload({ id: item.id + '_sub', url: item.subtitleUrl, filename: subName, connections: 2 });
       } catch (e) { console.warn('sub:', e); }
     }
   }

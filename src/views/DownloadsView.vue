@@ -3,8 +3,10 @@ import { onMounted, computed, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useDownloadsStore } from '../stores/downloads';
 import { getDirectUrl } from '../lib/api';
+import { deleteDownloadedFile, formatBytes } from '../lib/storage';
+import { CapacitorDownloader } from '@capgo/capacitor-downloader';
 import {
-  Download, Pause, Play, Trash2, Check, X, Loader2, FolderDown, ListX, Film, FolderOpen
+  Download, Pause, Play, Trash2, Check, X, Loader2, FolderDown, ListX, Film, FileX
 } from 'lucide-vue-next';
 
 const route = useRoute();
@@ -20,22 +22,12 @@ onMounted(async () => {
     const size = parseInt(route.query.size || '0', 10);
     const subPath = String(route.query.sub || '');
     await store.enqueue({
-      url: getDirectUrl(path),
-      name,
-      size,
+      url: getDirectUrl(path), name, size,
       subtitleUrl: subPath ? getDirectUrl(subPath) : null
     });
     router.replace({ name: 'downloads' });
   }
 });
-
-function fmtSize(b) {
-  if (!b) return '—';
-  if (b >= 1073741824) return (b / 1073741824).toFixed(2) + ' GB';
-  if (b >= 1048576) return (b / 1048576).toFixed(1) + ' MB';
-  if (b >= 1024) return (b / 1024).toFixed(0) + ' KB';
-  return b + ' B';
-}
 
 async function play(item) {
   playing.value = item.id;
@@ -45,10 +37,18 @@ async function play(item) {
     if (info && info.path) {
       await FileOpener.open({ filePath: info.path, contentType: 'video/*' });
     }
-  } catch (e) {
-    console.warn('play:', e);
-  }
+  } catch (e) { console.warn('play:', e); }
   playing.value = null;
+}
+
+async function removeWithFile(item) {
+  if (!confirm('¿Borrar también el archivo del dispositivo?')) {
+    await store.remove(item.id);
+    return;
+  }
+  const r = await deleteDownloadedFile(item.name);
+  if (!r.ok) console.warn('no se pudo borrar archivo:', r.error);
+  await store.remove(item.id);
 }
 
 const items = computed(() => store.items);
@@ -86,7 +86,7 @@ const items = computed(() => store.items);
 
         <div class="row">
           <span class="meta">
-            {{ fmtSize(d.size) }} · {{ d.progress || 0 }}%
+            {{ formatBytes(d.size) }} · {{ d.progress || 0 }}%
             <template v-if="d.retries"> · reintento {{ d.retries }}</template>
             <template v-if="d.error"> · {{ d.error }}</template>
           </span>
@@ -94,15 +94,10 @@ const items = computed(() => store.items);
             <button v-if="d.status === 'completed'" @click="play(d)" :disabled="playing === d.id" title="Reproducir">
               <Film :size="16" /> Reproducir
             </button>
-            <button v-if="d.status === 'downloading'" @click="store.pause(d.id)" title="Pausar">
-              <Pause :size="16" />
-            </button>
-            <button v-else-if="d.status === 'paused'" @click="store.resume(d.id)" title="Reanudar">
-              <Play :size="16" />
-            </button>
-            <button @click="store.remove(d.id)" title="Borrar">
-              <Trash2 :size="16" />
-            </button>
+            <button v-if="d.status === 'downloading'" @click="store.pause(d.id)" title="Pausar"><Pause :size="16" /></button>
+            <button v-else-if="d.status === 'paused'" @click="store.resume(d.id)" title="Reanudar"><Play :size="16" /></button>
+            <button v-if="d.status === 'completed'" @click="removeWithFile(d)" title="Borrar del celu"><FileX :size="16" /></button>
+            <button v-else @click="store.remove(d.id)" title="Borrar de la lista"><Trash2 :size="16" /></button>
           </div>
         </div>
       </li>
@@ -129,7 +124,7 @@ const items = computed(() => store.items);
 .fill { height: 100%; background: var(--accent); transition: width 0.3s; }
 .fill.ok { background: var(--success); }
 .fill.err { background: var(--danger); }
-.row { display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: var(--muted); }
+.row { display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: var(--muted); flex-wrap: wrap; gap: 8px; }
 .actions { display: flex; gap: 4px; }
 .actions button { background: transparent; border: none; padding: 4px; color: var(--text); display: inline-flex; align-items: center; gap: 4px; font-size: 12px; }
 </style>

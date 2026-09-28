@@ -1,10 +1,12 @@
 <script setup>
-import { ref } from 'vue';
+import { ref, onMounted } from 'vue';
 import { getBaseUrl, setBase, health, isNative } from '../lib/api';
 import { useDownloadsStore } from '../stores/downloads';
+import { getDiskInfo, formatBytes } from '../lib/storage';
+import { checkForUpdates, currentVersion } from '../lib/updates';
 import {
   Save, Wifi, CheckCircle, XCircle, Loader2, Server, Smartphone,
-  Sliders, Trash2, Globe
+  Sliders, Trash2, HardDrive, RefreshCw, Download
 } from 'lucide-vue-next';
 
 const store = useDownloadsStore();
@@ -15,6 +17,14 @@ const testResult = ref(null);
 const connections = ref(store.settings.connections);
 const maxConcurrent = ref(store.settings.maxConcurrent);
 const autoSubtitles = ref(store.settings.autoSubtitles);
+const disk = ref({ free: 0, total: 0 });
+const update = ref(null);
+const checkingUpdate = ref(false);
+
+onMounted(async () => {
+  await store.load();
+  disk.value = await getDiskInfo();
+});
 
 function save() {
   setBase(input.value);
@@ -33,9 +43,14 @@ function save() {
 async function test() {
   save();
   testing.value = true;
-  testResult.value = null;
   testResult.value = await health();
   testing.value = false;
+}
+
+async function checkUpdates() {
+  checkingUpdate.value = true;
+  update.value = await checkForUpdates();
+  checkingUpdate.value = false;
 }
 
 async function clearAll() {
@@ -74,8 +89,29 @@ async function clearAll() {
     </div>
 
     <div class="card">
+      <div class="row"><HardDrive :size="18" /><span class="label">Almacenamiento</span></div>
+      <p class="value">{{ formatBytes(disk.free) }} libres de {{ formatBytes(disk.total) }}</p>
+    </div>
+
+    <div class="card">
       <div class="row"><Smartphone :size="18" /><span class="label">Entorno</span></div>
       <p class="value">{{ isNative() ? 'App nativa (Capacitor)' : 'Navegador web' }}</p>
+    </div>
+
+    <div class="card">
+      <div class="row"><Download :size="18" /><span class="label">Versión</span></div>
+      <p class="value">v{{ currentVersion() }}</p>
+      <button class="update-btn" @click="checkUpdates" :disabled="checkingUpdate">
+        <RefreshCw :size="16" :class="{ spin: checkingUpdate }" />
+        {{ checkingUpdate ? 'Buscando...' : 'Buscar actualizaciones' }}
+      </button>
+      <div v-if="update && !update.error" class="update-result">
+        <p v-if="update.hasUpdate" class="has-update">
+          Nueva versión: {{ update.latest }}
+          <a v-if="update.downloadUrl" :href="update.downloadUrl" target="_blank">Descargar</a>
+        </p>
+        <p v-else class="no-update">Estás en la última versión</p>
+      </div>
     </div>
 
     <div class="btns">
@@ -121,4 +157,11 @@ async function clearAll() {
 .result.err { background: rgba(239, 68, 68, 0.1); color: var(--danger); }
 .danger { border-color: rgba(239, 68, 68, 0.3); }
 .danger-btn { background: rgba(239, 68, 68, 0.1); color: var(--danger); border-color: rgba(239, 68, 68, 0.3); display: inline-flex; align-items: center; gap: 6px; width: 100%; justify-content: center; }
+.update-btn { background: transparent; border: 1px solid var(--border); padding: 6px 12px; display: inline-flex; align-items: center; gap: 6px; margin-top: 8px; font-size: 13px; }
+.update-result { margin-top: 8px; font-size: 13px; }
+.has-update { color: var(--accent); }
+.has-update a { margin-left: 8px; text-decoration: underline; }
+.no-update { color: var(--muted); }
+.spin { animation: spin 1s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
 </style>
