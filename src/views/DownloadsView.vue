@@ -1,63 +1,87 @@
 <script setup>
 import { onMounted, computed } from 'vue';
-import { useRoute } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import { useDownloadsStore } from '../stores/downloads';
-import { getDirectUrl, getFileSize } from '../lib/api';
-import { Download, Pause, Play, Trash2, Check, X, Loader2 } from 'lucide-vue-next';
+import { getDirectUrl } from '../lib/api';
+import {
+  Download, Pause, Play, Trash2, Check, X, Loader2, FolderDown, ListX
+} from 'lucide-vue-next';
 
 const route = useRoute();
+const router = useRouter();
 const store = useDownloadsStore();
 
 onMounted(async () => {
   await store.load();
   if (route.query.url && route.query.name) {
-    await startDownload(route.query.url, route.query.name, parseInt(route.query.size || '0', 10));
+    const path = String(route.query.url);
+    const name = String(route.query.name);
+    const size = parseInt(route.query.size || '0', 10);
+    await store.enqueue({ url: getDirectUrl(path), name, size });
+    router.replace({ name: 'downloads' });
   }
 });
 
-async function startDownload(path, name, size) {
-  const url = getDirectUrl(path);
-  const id = await store.add({ url, name, path, size });
-  // Aquí en la próxima fase conectamos el downloader nativo
-  // Por ahora solo registramos la intención
+function fmtSize(b) {
+  if (!b) return '—';
+  if (b >= 1073741824) return (b / 1073741824).toFixed(2) + ' GB';
+  if (b >= 1048576) return (b / 1048576).toFixed(1) + ' MB';
+  if (b >= 1024) return (b / 1024).toFixed(0) + ' KB';
+  return b + ' B';
 }
 
-function formatSize(bytes) {
-  if (!bytes) return '—';
-  if (bytes >= 1073741824) return (bytes / 1073741824).toFixed(2) + ' GB';
-  if (bytes >= 1048576) return (bytes / 1048576).toFixed(1) + ' MB';
-  if (bytes >= 1024) return (bytes / 1024).toFixed(0) + ' KB';
-  return bytes + ' B';
+function fmtSpeed(bytesDone, item) {
+  return '';
 }
 
-const all = computed(() => store.items);
+const items = computed(() => store.items);
 </script>
 
 <template>
   <div>
-    <h2>Descargas</h2>
+    <div class="head">
+      <h2>Descargas</h2>
+      <button v-if="items.length" class="clear" @click="() => items.filter(i => i.status === 'completed' || i.status === 'failed').forEach(i => store.remove(i.id))">
+        <ListX :size="16" /> Limpiar
+      </button>
+    </div>
 
-    <p v-if="!all.length" class="empty">Aún no hay descargas. Ve al catálogo y pulsa en una película o serie.</p>
+    <div v-if="!items.length" class="empty">
+      <FolderDown :size="48" />
+      <p>Aún no hay descargas.</p>
+      <p class="hint">Ve al catálogo y pulsa en una película o serie.</p>
+    </div>
 
     <ul v-else class="list">
-      <li v-for="d in all" :key="d.id" class="item">
-        <div class="head">
-          <Loader2 v-if="d.status === 'downloading'" :size="20" class="spin" />
-          <Check v-else-if="d.status === 'completed'" :size="20" class="ok" />
-          <X v-else-if="d.status === 'failed'" :size="20" class="err" />
-          <Pause v-else-if="d.status === 'paused'" :size="20" class="paused" />
-          <Download v-else :size="20" class="muted" />
+      <li v-for="d in items" :key="d.id" class="item">
+        <div class="head-row">
+          <Loader2 v-if="d.status === 'downloading'" :size="20" class="ico spin" />
+          <Check v-else-if="d.status === 'completed'" :size="20" class="ico ok" />
+          <X v-else-if="d.status === 'failed'" :size="20" class="ico err" />
+          <Pause v-else-if="d.status === 'paused'" :size="20" class="ico paused" />
+          <Download v-else :size="20" class="ico muted" />
           <span class="name">{{ d.name }}</span>
         </div>
+
         <div class="bar">
-          <div class="fill" :style="{ width: (d.progress || 0) + '%' }"></div>
+          <div class="fill" :class="{ ok: d.status === 'completed', err: d.status === 'failed' }" :style="{ width: (d.progress || 0) + '%' }"></div>
         </div>
+
         <div class="row">
-          <span class="size">{{ formatSize(d.size) }} · {{ d.progress || 0 }}%</span>
+          <span class="meta">
+            {{ fmtSize(d.size) }} · {{ d.progress || 0 }}%
+            <template v-if="d.error"> · {{ d.error }}</template>
+          </span>
           <div class="actions">
-            <button v-if="d.status === 'paused'" @click="() => {}"><Play :size="16" /></button>
-            <button v-else-if="d.status === 'downloading'" @click="() => {}"><Pause :size="16" /></button>
-            <button @click="store.remove(d.id)"><Trash2 :size="16" /></button>
+            <button v-if="d.status === 'downloading'" @click="store.pause(d.id)" title="Pausar">
+              <Pause :size="16" />
+            </button>
+            <button v-else-if="d.status === 'paused'" @click="store.resume(d.id)" title="Reanudar">
+              <Play :size="16" />
+            </button>
+            <button @click="store.remove(d.id)" title="Borrar de la lista">
+              <Trash2 :size="16" />
+            </button>
           </div>
         </div>
       </li>
@@ -66,19 +90,25 @@ const all = computed(() => store.items);
 </template>
 
 <style scoped>
-.empty { color: var(--muted); text-align: center; padding: 40px 20px; }
-.list { list-style: none; padding: 0; margin: 0; }
+.head { display: flex; justify-content: space-between; align-items: center; }
+.clear { background: transparent; border: none; color: var(--muted); font-size: 13px; display: inline-flex; gap: 4px; align-items: center; }
+.empty { display: flex; flex-direction: column; align-items: center; padding: 60px 20px; color: var(--muted); text-align: center; gap: 12px; }
+.empty .hint { font-size: 13px; }
+.list { list-style: none; padding: 0; margin: 16px 0 0; }
 .item { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px; margin-bottom: 10px; }
-.head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.head-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
 .name { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 14px; }
-.spin { animation: spin 1s linear infinite; color: var(--accent); }
+.ico.spin { animation: spin 1s linear infinite; color: var(--accent); }
 @keyframes spin { to { transform: rotate(360deg); } }
-.ok { color: var(--success); }
-.err { color: var(--danger); }
-.paused { color: var(--muted); }
-.muted { color: var(--muted); }
+.ico.ok { color: var(--success); }
+.ico.err { color: var(--danger); }
+.ico.paused { color: var(--muted); }
+.ico.muted { color: var(--muted); }
 .bar { height: 4px; background: var(--panel-2); border-radius: 2px; overflow: hidden; margin-bottom: 8px; }
 .fill { height: 100%; background: var(--accent); transition: width 0.3s; }
+.fill.ok { background: var(--success); }
+.fill.err { background: var(--danger); }
 .row { display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: var(--muted); }
-.actions button { background: transparent; border: none; padding: 4px; }
+.actions { display: flex; gap: 4px; }
+.actions button { background: transparent; border: none; padding: 4px; color: var(--text); }
 </style>

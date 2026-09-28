@@ -2,19 +2,18 @@
 import { ref, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { listDirectory } from '../lib/api';
-import { useDownloadsStore } from '../stores/downloads';
 import {
   Folder, Film, FileText, Image, Archive, Music, File, ChevronRight,
-  Home, ArrowLeft, RefreshCw, Search, Download, Loader2
+  Home, RefreshCw, Search, Download, Loader2
 } from 'lucide-vue-next';
 
 const router = useRouter();
-const downloadsStore = useDownloadsStore();
 const currentPath = ref('/');
 const entries = ref([]);
 const loading = ref(false);
 const error = ref('');
 const search = ref('');
+
 const breadcrumbs = computed(() => {
   if (currentPath.value === '/') return [{ name: 'Inicio', path: '/' }];
   const parts = currentPath.value.split('/').filter(Boolean);
@@ -58,6 +57,7 @@ async function load(path) {
     const data = await listDirectory(path);
     entries.value = data.entries.filter(e => e.type !== 'parent');
     currentPath.value = path;
+    search.value = '';
   } catch (e) {
     error.value = String(e.message || e);
   } finally {
@@ -69,7 +69,10 @@ function openEntry(entry) {
   if (entry.type === 'dir') {
     load(entry.path);
   } else {
-    router.push({ name: 'downloads', query: { url: entry.path, name: entry.name, size: entry.size } });
+    router.push({
+      name: 'downloads',
+      query: { url: entry.path, name: entry.name, size: entry.size }
+    });
   }
 }
 
@@ -78,19 +81,17 @@ load('/');
 
 <template>
   <div>
-    <!-- Breadcrumb -->
     <div class="crumbs">
       <button v-for="(c, i) in breadcrumbs" :key="c.path" class="crumb" @click="load(c.path)">
-        <Home v-if="i === 0" :size="16" />
-        <ChevronRight v-else :size="14" class="sep" />
+        <Home v-if="i === 0" :size="14" />
+        <ChevronRight v-else :size="12" class="sep" />
         <span>{{ c.name }}</span>
       </button>
     </div>
 
-    <!-- Buscador -->
     <div class="searchbar">
       <Search :size="18" />
-      <input v-model="search" placeholder="Buscar en este directorio..." />
+      <input v-model="search" placeholder="Buscar aquí..." />
       <button @click="load(currentPath)" :disabled="loading" class="refresh">
         <RefreshCw :size="18" :class="{ spin: loading }" />
       </button>
@@ -98,16 +99,14 @@ load('/');
 
     <p v-if="error" class="error">{{ error }}</p>
 
-    <div v-if="loading" class="loading">
-      <Loader2 :size="32" class="spin" />
-    </div>
+    <div v-if="loading" class="loading"><Loader2 :size="32" class="spin" /></div>
 
     <ul v-else class="entries">
       <li v-for="e in filtered" :key="e.path" @click="openEntry(e)" class="entry">
         <component :is="iconFor(e)" :size="22" class="ico" :class="e.type" />
         <div class="info">
           <span class="name">{{ e.name }}</span>
-          <span class="meta">{{ e.modified }} <template v-if="e.size"> · {{ formatSize(e.size) }}</template></span>
+          <span class="meta">{{ e.modified }}<template v-if="e.size"> · {{ formatSize(e.size) }}</template></span>
         </div>
         <Download v-if="e.type !== 'dir'" :size="16" class="dl" />
         <ChevronRight v-else :size="18" class="chev" />
