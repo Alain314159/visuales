@@ -1,5 +1,5 @@
 // @visuales-downloader-v1
-import { Downloader } from '@capgo/capacitor-downloader';
+import { CapacitorDownloader } from '@capgo/capacitor-downloader';
 import { Directory } from '@capacitor/filesystem';
 
 let listenersReady = false;
@@ -15,19 +15,19 @@ export function initDownloader({ onProgress, onCompleted, onFailed }) {
   if (listenersReady) return;
   listenersReady = true;
 
-  Downloader.addListener('downloadProgress', (event) => {
+  CapacitorDownloader.addListener('downloadProgress', (event) => {
     if (progressHandler) progressHandler(event);
   });
-  Downloader.addListener('downloadCompleted', (event) => {
+  CapacitorDownloader.addListener('downloadCompleted', (event) => {
     if (completedHandler) completedHandler(event);
   });
-  Downloader.addListener('downloadFailed', (event) => {
+  CapacitorDownloader.addListener('downloadFailed', (event) => {
     if (failedHandler) failedHandler(event);
   });
 }
 
 export async function startDownload({ id, url, filename }) {
-  return await Downloader.download({
+  return await CapacitorDownloader.download({
     id,
     url,
     location: 'Visuales',
@@ -36,21 +36,21 @@ export async function startDownload({ id, url, filename }) {
 }
 
 export async function pauseDownload(id) {
-  try { return await Downloader.pause({ id }); }
+  try { return await CapacitorDownloader.pause({ id }); }
   catch (e) { console.warn('pause no soportado:', e); }
 }
 
 export async function resumeDownload(id) {
-  try { return await Downloader.resume({ id }); }
+  try { return await CapacitorDownloader.resume({ id }); }
   catch (e) { console.warn('resume no soportado:', e); }
 }
 
 export async function cancelDownload(id) {
-  try { return await Downloader.stop({ id }); }
+  try { return await CapacitorDownloader.stop({ id }); }
   catch (e) { console.warn('stop no soportado:', e); }
 }
 
 export async function listNativeDownloads() {
-  try { return await Downloader.getList(); }
+  try { return await CapacitorDownloader.getList(); }
   catch { return { files: [] }; }
 }
