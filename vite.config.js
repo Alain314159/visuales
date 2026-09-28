@@ -2,27 +2,21 @@ import { defineConfig } from 'vite';
 import vue from '@vitejs/plugin-vue';
 import { VitePWA } from 'vite-plugin-pwa';
 
-// ⚠️ Si el repo en GitHub no se llama "visuales", cambia esta base.
+const isCapacitor = process.env.CAP_BUILD === '1';
+
 export default defineConfig({
-  base: '/visuales/',
+  base: isCapacitor ? './' : '/visuales/',
   plugins: [
     vue(),
-    VitePWA({
+    !isCapacitor && VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg', 'icons/*.svg'],
       manifest: false,
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,ico,woff2}'],
-        maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
-        navigateFallback: '/visuales/index.html',
-        runtimeCaching: [
-          {
-            // Nunca cachear las descargas grandes del worker
-            urlPattern: ({ url }) => url.pathname.startsWith('/api/file'),
-            handler: 'NetworkOnly'
-          }
-        ]
+        maximumFileSizeToCacheInBytes: 10 * 1024 * 1024,
+        navigateFallback: '/visuales/index.html'
       }
     })
-  ]
+  ].filter(Boolean)
 });

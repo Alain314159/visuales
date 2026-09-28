@@ -10,3 +10,4 @@ dist-ssr/
 worker/node_modules/
 .vscode/
 .idea/
+*.bak-*
