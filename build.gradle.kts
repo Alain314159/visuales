@@ -9,3 +9,15 @@ plugins {
     alias(libs.plugins.ksp) apply false
     alias(libs.plugins.hilt) apply false
 }
+
+// Global: exclude com.intellij:annotations (conflicts with org.jetbrains:annotations
+// that comes from Kotlin stdlib). The IntelliJ artifact is legacy and exists in
+// some transitive deps like older okhttp/retrofit.
+subprojects {
+    configurations.all {
+        exclude(group = "com.intellij", module = "annotations")
+        resolutionStrategy {
+            force("org.jetbrains:annotations:23.0.0")
+        }
+    }
+}
