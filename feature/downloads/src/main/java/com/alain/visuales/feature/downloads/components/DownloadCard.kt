@@ -19,7 +19,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Error
-import androidx.compose.material.icons.filled.Film
+import androidx.compose.material.icons.filled.Movie
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
@@ -164,10 +164,11 @@ fun DownloadCard(
 
             // ---- Error message (FAILED only) --------------------------
 
-            if (status == DownloadStatus.FAILED && !dl.error.isNullOrBlank()) {
+            val error = dl.error
+            if (status == DownloadStatus.FAILED && !error.isNullOrBlank()) {
                 Spacer(Modifier.height(6.dp))
                 Text(
-                    text = dl.error,
+                    text = error,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.error,
                     maxLines = 2,
@@ -348,7 +349,7 @@ private fun ActionsRow(
                 DownloadStatus.COMPLETED -> {
                     FilledTonalButton(onClick = onPlay) {
                         Icon(
-                            imageVector = Icons.Filled.Film,
+                            imageVector = Icons.Filled.Movie,
                             contentDescription = null,
                             modifier = Modifier.size(18.dp)
                         )

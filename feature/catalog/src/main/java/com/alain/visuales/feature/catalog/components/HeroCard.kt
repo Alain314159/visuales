@@ -52,9 +52,10 @@ fun HeroCard(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-            if (directory.subcategory != null && directory.subcategory.isNotBlank()) {
+            val sub = directory.subcategory
+            if (sub != null && sub.isNotBlank()) {
                 Text(
-                    text = directory.subcategory,
+                    text = sub,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

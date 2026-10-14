@@ -169,7 +169,7 @@ class DownloadService : Service() {
                 speedSamples.remove(removedId)
             }
 
-            val active = all.filter { it.status in ACTIVE_STATUSES }
+            val active: List<DownloadEntity> = all.filter { it.status in ACTIVE_STATUSES }
             val activeIds = active.map { it.id }.toSet()
 
             // 2. Transition detection: downloads that left the active set.
@@ -178,12 +178,12 @@ class DownloadService : Service() {
                 if (dl.id in activeIds) continue
                 // Was active, no longer active.
                 when (dl.status) {
-                    DownloadStatus.COMPLETED -> notifications.notifyCompleted(dl)
-                    DownloadStatus.FAILED -> notifications.notifyFailed(
+                    DownloadStatus.COMPLETED.name -> notifications.notifyCompleted(dl)
+                    DownloadStatus.FAILED.name -> notifications.notifyFailed(
                         dl,
                         dl.error ?: "Error desconocido"
                     )
-                    DownloadStatus.CANCELLED -> notifications.cancel(dl.id)
+                    DownloadStatus.CANCELLED.name -> notifications.cancel(dl.id)
                     else -> { /* no-op */ }
                 }
                 // Drop the speed sample so a later resume starts fresh.
@@ -277,11 +277,13 @@ class DownloadService : Service() {
 
         const val EXTRA_DOWNLOAD_ID = "download_id"
 
-        /** Downloads considered "active" (non-terminal). */
-        private val ACTIVE_STATUSES = setOf(
-            DownloadStatus.QUEUED,
-            DownloadStatus.DOWNLOADING,
-            DownloadStatus.PAUSED
+        /** Downloads considered "active" (non-terminal). Stored as their
+         *  [DownloadStatus.name] strings so they can be compared directly
+         *  against [DownloadEntity.status] (which is a String column). */
+        private val ACTIVE_STATUSES: Set<String> = setOf(
+            DownloadStatus.QUEUED.name,
+            DownloadStatus.DOWNLOADING.name,
+            DownloadStatus.PAUSED.name
         )
 
         /**

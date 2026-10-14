@@ -258,7 +258,7 @@ class DownloadNotifications @Inject constructor(
             .setSmallIcon(android.R.drawable.stat_sys_download)
             .setContentTitle(dl.name)
             .setContentText(contentText)
-            .setProgress(100, progress, progress == 0 && dl.status == DownloadStatus.DOWNLOADING)
+            .setProgress(100, progress, progress == 0 && dl.status == DownloadStatus.DOWNLOADING.name)
             .setOngoing(true)
             .setOnlyAlertOnce(true)
             .setSilent(true)
