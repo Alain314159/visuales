@@ -450,7 +450,7 @@ fun SettingsScreen(
                         subtitle = "github.com/Alain314159/visuales",
                         icon = Icons.Outlined.Code,
                         onClick = {
-                            uriHandler.openUri(Uri.parse("https://github.com/Alain314159/visuales"))
+                            uriHandler.openUri("https://github.com/Alain314159/visuales")
                         },
                         trailing = {
                             Icon(
@@ -466,7 +466,7 @@ fun SettingsScreen(
                         icon = Icons.Outlined.BugReport,
                         onClick = {
                             uriHandler.openUri(
-                                Uri.parse("https://github.com/Alain314159/visuales/issues/new")
+                                "https://github.com/Alain314159/visuales/issues/new"
                             )
                         },
                         trailing = {
@@ -482,9 +482,7 @@ fun SettingsScreen(
                         subtitle = "Copyright © 2025 Alain314159",
                         onClick = {
                             uriHandler.openUri(
-                                Uri.parse(
-                                    "https://github.com/Alain314159/visuales/blob/main/LICENSE"
-                                )
+                                "https://github.com/Alain314159/visuales/blob/main/LICENSE"
                             )
                         }
                     )

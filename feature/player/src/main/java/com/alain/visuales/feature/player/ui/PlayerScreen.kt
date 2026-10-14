@@ -8,6 +8,7 @@ import android.net.Uri
 import android.util.Rational
 import android.view.WindowManager
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -26,6 +27,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -37,7 +39,7 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.MimeTypes
 import androidx.media3.common.PlaybackParameters
 import androidx.media3.common.Player
-import androidx.media3.common.SubtitleConfiguration
+import androidx.media3.common.MediaItem.SubtitleConfiguration
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
@@ -214,27 +216,10 @@ fun PlayerScreen(
     }
 
     // ---- Auto Picture-in-Picture on user-leave (if pipAuto) ---------------
-    DisposableEffect(settings.pipAuto) {
-        val a = activity as? androidx.activity.ComponentActivity
-        if (a == null || !settings.pipAuto) {
-            onDispose { /* no-op */ }
-        } else {
-            val listener = Runnable {
-                if (settings.pipAuto && exoPlayer.isPlaying) {
-                    try {
-                        val params = PictureInPictureParams.Builder()
-                            .setAspectRatio(Rational(16, 9))
-                            .build()
-                        a.enterPictureInPictureMode(params)
-                    } catch (_: IllegalStateException) {
-                        // PiP unavailable on this device / config.
-                    }
-                }
-            }
-            a.addOnUserLeaveHintListener(listener)
-            onDispose { runCatching { a.removeOnUserLeaveHintListener(listener) } }
-        }
-    }
+    // TODO: implement auto-PiP via Activity lifecycle observer.
+    // `addOnUserLeaveHintListener` is an Activity-level API and cannot be
+    // safely wired from a Composable scope; users can still enter PiP
+    // manually via the PiP button in [PlayerControls].
 
     // ---- Brightness / volume helpers --------------------------------------
     val audioManager = remember(context) {
@@ -544,8 +529,8 @@ private fun OverlayBubble(
  */
 private fun Modifier.pointerInputTapToggle(onTap: () -> Unit): Modifier =
     this.then(
-        androidx.compose.ui.input.pointer.pointerInput(Unit) {
-            androidx.compose.foundation.gestures.detectTapGestures(
+        pointerInput(Unit) {
+            detectTapGestures(
                 onTap = { onTap() }
             )
         }
