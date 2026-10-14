@@ -42,16 +42,6 @@ dependencies {
     implementation(libs.hilt.android)
     kapt(libs.hilt.compiler)
 
-    // Feature-specific deps
-    if (project.path == ":feature:downloads") {
-        implementation(libs.androidx.work.runtime.ktx)
-        implementation(libs.androidx.hilt.work)
-        kapt(libs.androidx.hilt.compiler)
-    }
-    if (project.path == ":feature:player") {
-        implementation(libs.androidx.media3.exoplayer)
-        implementation(libs.androidx.media3.ui)
-        implementation(libs.androidx.media3.common)
-        implementation(libs.androidx.media3.session)
-    }
+    // DataStore (SettingsRepository uses it; feature:settings VM exposes mutator wrappers)
+    implementation(libs.androidx.datastore.preferences)
 }

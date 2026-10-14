@@ -62,6 +62,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.platform.UriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -449,7 +450,7 @@ fun SettingsScreen(
                         subtitle = "github.com/Alain314159/visuales",
                         icon = Icons.Outlined.Code,
                         onClick = {
-                            uriHandler.launchUri(Uri.parse("https://github.com/Alain314159/visuales"))
+                            uriHandler.openUri(Uri.parse("https://github.com/Alain314159/visuales"))
                         },
                         trailing = {
                             Icon(
@@ -464,7 +465,7 @@ fun SettingsScreen(
                         subtitle = "Abrir un issue en GitHub",
                         icon = Icons.Outlined.BugReport,
                         onClick = {
-                            uriHandler.launchUri(
+                            uriHandler.openUri(
                                 Uri.parse("https://github.com/Alain314159/visuales/issues/new")
                             )
                         },
@@ -480,7 +481,7 @@ fun SettingsScreen(
                         title = "Licencia MIT",
                         subtitle = "Copyright © 2025 Alain314159",
                         onClick = {
-                            uriHandler.launchUri(
+                            uriHandler.openUri(
                                 Uri.parse(
                                     "https://github.com/Alain314159/visuales/blob/main/LICENSE"
                                 )
