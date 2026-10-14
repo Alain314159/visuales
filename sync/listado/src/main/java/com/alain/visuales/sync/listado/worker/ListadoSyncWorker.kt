@@ -1,4 +1,4 @@
-package com.alain.visuales.sync.listado
+package com.alain.visuales.sync.listado.worker
 
 import android.content.Context
 import androidx.hilt.work.HiltWorker

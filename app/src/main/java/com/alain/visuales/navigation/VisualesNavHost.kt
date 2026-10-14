@@ -26,13 +26,13 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navOptions
 import com.alain.visuales.R
-import com.alain.visuales.feature.catalog.catalogGraph
+import com.alain.visuales.feature.catalog.navigation.catalogGraph
 import com.alain.visuales.feature.catalog.navigation.CATALOG_GRAPH
 import com.alain.visuales.feature.catalog.navigation.CATALOG_HOME_ROUTE
 import com.alain.visuales.feature.catalog.navigation.CATALOG_SEARCH_ROUTE
-import com.alain.visuales.feature.downloads.downloadsGraph
-import com.alain.visuales.feature.library.libraryGraph
-import com.alain.visuales.feature.settings.settingsGraph
+import com.alain.visuales.feature.downloads.navigation.downloadsGraph
+import com.alain.visuales.feature.library.navigation.libraryGraph
+import com.alain.visuales.feature.settings.navigation.settingsGraph
 import com.alain.visuales.feature.settings.navigation.SETTINGS_ROUTE
 import com.alain.visuales.onboarding.OnboardingScreen
 
