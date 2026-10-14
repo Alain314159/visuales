@@ -88,7 +88,7 @@ class DownloadRepository @Inject constructor(
             name = name,
             size = size,
             status = DownloadStatus.QUEUED,
-            priority = DownloadPriority.NORMAL,
+            priority = DownloadPriority.NORMAL.name,
             createdAt = System.currentTimeMillis(),
             section = section,
             subtitleUrl = subtitleUrl,
@@ -154,7 +154,7 @@ class DownloadRepository @Inject constructor(
 
     suspend fun setPriority(id: String, priority: DownloadPriority) {
         val dl = downloadDao.getById(id) ?: return
-        downloadDao.upsert(dl.copy(priority = priority))
+        downloadDao.upsert(dl.copy(priority = priority.name))
         pumpQueue()
     }
 
