@@ -26,7 +26,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
-import okhttp3.OkHttpClient
 import java.io.File
 import java.text.Normalizer
 import java.util.UUID
@@ -127,16 +126,16 @@ class DownloadRepository @Inject constructor(
     )
 
     suspend fun pause(id: String) {
-        downloadDao.setStatus(id, DownloadStatus.PAUSED)
+        downloadDao.setStatus(id, DownloadStatus.PAUSED.name)
     }
 
     suspend fun resume(id: String) {
-        downloadDao.setStatus(id, DownloadStatus.QUEUED)
+        downloadDao.setStatus(id, DownloadStatus.QUEUED.name)
         pumpQueue()
     }
 
     suspend fun cancel(id: String) {
-        downloadDao.setStatus(id, DownloadStatus.CANCELLED)
+        downloadDao.setStatus(id, DownloadStatus.CANCELLED.name)
         chunkDao.deleteChunks(id)
     }
 
@@ -180,7 +179,7 @@ class DownloadRepository @Inject constructor(
     private fun startDownloadInternal(dl: DownloadEntity, connections: Int) {
         scope.launch {
             try {
-                downloadDao.setStatus(dl.id, DownloadStatus.DOWNLOADING)
+                downloadDao.setStatus(dl.id, DownloadStatus.DOWNLOADING.name)
 
                 val outputFile = getFile(dl)
                 outputFile.parentFile?.mkdirs()
@@ -206,7 +205,7 @@ class DownloadRepository @Inject constructor(
                             completed = false
                         )
                     }
-                    chunkDao.upsertChunks(chunks)
+                    chunkDao.upsertAll(chunks)
                 }
 
                 downloader.download(
@@ -229,7 +228,7 @@ class DownloadRepository @Inject constructor(
                         override fun onCompleted(outputFile: File) {
                             scope.launch {
                                 downloadDao.setStatusAndCompletedAt(
-                                    dl.id, DownloadStatus.COMPLETED, System.currentTimeMillis()
+                                    dl.id, DownloadStatus.COMPLETED.name, System.currentTimeMillis()
                                 )
                                 // Auto-download subtitles if configured.
                                 if (dl.subtitleUrl != null) {
@@ -248,11 +247,11 @@ class DownloadRepository @Inject constructor(
                                 val current = downloadDao.getById(dl.id)
                                 if (current != null && current.retries >= AppConstants.DEFAULT_MAX_RETRIES) {
                                     downloadDao.setStatusAndError(
-                                        dl.id, DownloadStatus.FAILED, error.message ?: error.toString()
+                                        dl.id, DownloadStatus.FAILED.name, error.message ?: error.toString()
                                     )
                                 } else {
                                     // Will retry.
-                                    downloadDao.setStatus(dl.id, DownloadStatus.QUEUED)
+                                    downloadDao.setStatus(dl.id, DownloadStatus.QUEUED.name)
                                     kotlinx.coroutines.delay(3000)
                                     pumpQueue()
                                 }
@@ -261,7 +260,7 @@ class DownloadRepository @Inject constructor(
                     }
                 )
             } catch (e: Exception) {
-                downloadDao.setStatusAndError(dl.id, DownloadStatus.FAILED, e.message ?: e.toString())
+                downloadDao.setStatusAndError(dl.id, DownloadStatus.FAILED.name, e.message ?: e.toString())
             }
         }
     }

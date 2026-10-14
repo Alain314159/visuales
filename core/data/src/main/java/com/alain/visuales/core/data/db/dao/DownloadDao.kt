@@ -48,16 +48,16 @@ interface DownloadDao {
     suspend fun countDownloading(): Int
 
     @Query("UPDATE downloads SET status = :status WHERE id = :id")
-    suspend fun setStatus(id: String, status: DownloadStatus)
+    suspend fun setStatus(id: String, status: String)
 
     @Query("UPDATE downloads SET progress = :progress, bytes_downloaded = :bytes WHERE id = :id")
     suspend fun updateProgress(id: String, progress: Int, bytes: Long)
 
     @Query("UPDATE downloads SET status = :status, error = :error WHERE id = :id")
-    suspend fun setStatusAndError(id: String, status: DownloadStatus, error: String?)
+    suspend fun setStatusAndError(id: String, status: String, error: String?)
 
     @Query("UPDATE downloads SET status = :status, completed_at = :completedAt WHERE id = :id")
-    suspend fun setStatusAndCompletedAt(id: String, status: DownloadStatus, completedAt: Long?)
+    suspend fun setStatusAndCompletedAt(id: String, status: String, completedAt: Long?)
 
     @Query("UPDATE downloads SET retries = retries + 1 WHERE id = :id")
     suspend fun incrementRetries(id: String)
