@@ -79,7 +79,7 @@ class MultiThreadDownloader @Inject constructor(
         val effectiveConnections = connections.coerceIn(1, 32)
 
         // Stage 1: HEAD request.
-        val metadata = doHead(url)
+        val metadata = head(url)
         if (metadata.statusCode !in 200..299) {
             callback.onFailed(IOException("HEAD returned HTTP ${metadata.statusCode}"))
             return@withContext
@@ -93,11 +93,11 @@ class MultiThreadDownloader @Inject constructor(
         }
 
         // Stage 2: prepare chunks.
-        val chunkSize = totalSize / effectiveConnections
+        val chunkSize: Long = totalSize / effectiveConnections
         val chunks = (0 until effectiveConnections).map { i ->
-            val start = i * chunkSize
-            val end = if (i == effectiveConnections - 1) totalSize - 1 else (start + chunkSize - 1)
-            val resumeFrom = resumePositions?.getOrNull(i)?.coerceIn(start, end + 1) ?: start
+            val start: Long = i.toLong() * chunkSize
+            val end: Long = if (i == effectiveConnections - 1) totalSize - 1L else (start + chunkSize - 1L)
+            val resumeFrom: Long = resumePositions?.getOrNull(i)?.coerceIn(start, end + 1L) ?: start
             ChunkState(i, start, end, AtomicLong(resumeFrom))
         }
 
