@@ -6,6 +6,7 @@ import androidx.room.RoomDatabase
 import androidx.room.TypeConverter
 import androidx.room.TypeConverters
 import android.content.Context
+import com.alain.visuales.core.data.db.dao.ChunkDao
 import com.alain.visuales.core.data.db.dao.DirectoryDao
 import com.alain.visuales.core.data.db.dao.DirectoryEntryDao
 import com.alain.visuales.core.data.db.dao.DownloadDao
@@ -43,6 +44,7 @@ abstract class VisualesDatabase : RoomDatabase() {
     abstract fun directoryDao(): DirectoryDao
     abstract fun directoryEntryDao(): DirectoryEntryDao
     abstract fun downloadDao(): DownloadDao
+    abstract fun chunkDao(): ChunkDao
     abstract fun libraryDao(): LibraryDao
     abstract fun syncStateDao(): SyncStateDao
 
@@ -84,6 +86,9 @@ object DatabaseModule {
 
     @Provides
     fun provideDownloadDao(db: VisualesDatabase): DownloadDao = db.downloadDao()
+
+    @Provides
+    fun provideChunkDao(db: VisualesDatabase): ChunkDao = db.chunkDao()
 
     @Provides
     fun provideLibraryDao(db: VisualesDatabase): LibraryDao = db.libraryDao()

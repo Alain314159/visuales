@@ -28,6 +28,8 @@ class VisualesApp : Application(), Configuration.Provider {
     override fun onCreate() {
         super.onCreate()
         createNotificationChannels()
+        // Schedule the periodic catalog sync worker (idempotent — KEEP policy).
+        com.alain.visuales.sync.listado.worker.ListadoSyncWorker.schedule(this)
     }
 
     private fun createNotificationChannels() {

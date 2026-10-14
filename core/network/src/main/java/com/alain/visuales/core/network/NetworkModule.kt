@@ -1,6 +1,7 @@
 package com.alain.visuales.core.network
 
 import com.alain.visuales.core.common.AppConstants
+import com.alain.visuales.core.network.download.MultiThreadDownloader
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -53,4 +54,9 @@ object NetworkModule {
             .baseUrl(AppConstants.DEFAULT_BASE_URL + "/")
             .client(client)
             .build()
+
+    @Provides
+    @Singleton
+    fun provideMultiThreadDownloader(client: OkHttpClient): MultiThreadDownloader =
+        MultiThreadDownloader(client)
 }
