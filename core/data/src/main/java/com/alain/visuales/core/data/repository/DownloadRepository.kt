@@ -87,7 +87,7 @@ class DownloadRepository @Inject constructor(
             localPath = "$safeName",
             name = name,
             size = size,
-            status = DownloadStatus.QUEUED,
+            status = DownloadStatus.QUEUED.name,
             priority = DownloadPriority.NORMAL.name,
             createdAt = System.currentTimeMillis(),
             section = section,
