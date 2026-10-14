@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!-- Allow HTTP cleartext to UCLV servers (they listen on port 80) -->
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="true">uclv.cu</domain>
+        <domain includeSubdomains="true">uclv.edu.cu</domain>
+    </domain-config>
+    <!-- All other traffic must use HTTPS -->
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>

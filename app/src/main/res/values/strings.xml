@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Visuales</string>
+    <string name="title_activity_main">Visuales</string>
+
+    <!-- Bottom Nav -->
+    <string name="nav_home">Inicio</string>
+    <string name="nav_search">Buscar</string>
+    <string name="nav_downloads">Descargas</string>
+    <string name="nav_library">Biblioteca</string>
+
+    <!-- Settings -->
+    <string name="nav_settings">Ajustes</string>
+    <string name="settings_title">Ajustes</string>
+
+    <!-- Common -->
+    <string name="action_retry">Reintentar</string>
+    <string name="action_cancel">Cancelar</string>
+    <string name="action_pause">Pausar</string>
+    <string name="action_resume">Reanudar</string>
+    <string name="action_delete">Eliminar</string>
+    <string name="action_save">Guardar</string>
+    <string name="action_share">Compartir</string>
+    <string name="action_open">Abrir</string>
+    <string name="action_play">Reproducir</string>
+    <string name="action_search">Buscar</string>
+    <string name="action_refresh">Actualizar</string>
+
+    <!-- Errors -->
+    <string name="error_no_connection">Sin conexión</string>
+    <string name="error_generic">Ocurrió un error</string>
+    <string name="error_download_failed">La descarga falló</string>
+
+    <!-- Empty states -->
+    <string name="empty_downloads_title">Aún no hay descargas</string>
+    <string name="empty_downloads_msg">Ve al catálogo y pulsa en una película o serie.</string>
+    <string name="empty_library_title">Tu biblioteca está vacía</string>
+    <string name="empty_library_msg">Las películas que descargues aparecerán aquí.</string>
+    <string name="empty_search_title">Busca algo</string>
+    <string name="empty_search_msg">Escribe el nombre de una película, serie o documental.</string>
+
+    <!-- Notifications -->
+    <string name="notif_channel_downloads_active">Descargas en curso</string>
+    <string name="notif_channel_downloads_completed">Descargas completadas</string>
+    <string name="notif_channel_downloads_failed">Descargas fallidas</string>
+    <string name="notif_channel_catalog_updates">Novedades del catálogo</string>
+    <string name="notif_channel_app_updates">Actualizaciones de la app</string>
+    <string name="notif_downloading">Descargando: %1$s</string>
+    <string name="notif_download_completed">Descarga completada: %1$s</string>
+    <string name="notif_download_failed">Descarga fallida: %1$s</string>
+    <string name="notif_new_items">Hay %1$d nuevos elementos en el catálogo</string>
+
+    <!-- Sync -->
+    <string name="sync_last_updated">Última actualización: %1$s</string>
+    <string name="sync_never">Nunca sincronizado</string>
+    <string name="sync_in_progress">Sincronizando catálogo…</string>
+
+    <!-- Catalog -->
+    <string name="catalog_recent">Recién agregados</string>
+    <string name="catalog_movies">Películas</string>
+    <string name="catalog_series">Series</string>
+    <string name="catalog_documentaries">Documentales</string>
+    <string name="catalog_courses">Cursos</string>
+    <string name="catalog_kids">Infantiles</string>
+    <string name="catalog_explore_by_folder">Explorar por carpeta</string>
+    <string name="catalog_search_hint">Buscar películas, series, documentales…</string>
+    <string name="catalog_offline_warning">Sin conexión — mostrando catálogo en caché</string>
+
+    <!-- Detail -->
+    <string name="detail_download">Descargar</string>
+    <string name="detail_add_to_queue">Añadir a la cola</string>
+    <string name="detail_play_streaming">Reproducir en streaming</string>
+    <string name="detail_download_all_season">Descargar temporada completa</string>
+    <string name="detail_size">Tamaño: %1$s</string>
+    <string name="detail_year">Año: %1$d</string>
+    <string name="detail_quality">Calidad: %1$s</string>
+
+    <!-- Settings sections -->
+    <string name="settings_general">General</string>
+    <string name="settings_catalog">Catálogo</string>
+    <string name="settings_downloads">Descargas</string>
+    <string name="settings_subtitles">Subtítulos</string>
+    <string name="settings_player">Reproductor</string>
+    <string name="settings_notifications">Notificaciones</string>
+    <string name="settings_about">Acerca de</string>
+
+    <!-- About -->
+    <string name="about_version">Versión %1$s (build %2$d)</string>
+    <string name="about_check_updates">Buscar actualizaciones</string>
+    <string name="about_source_code">Código fuente</string>
+    <string name="about_report_bug">Reportar un bug</string>
+    <string name="about_license">Licencia MIT</string>
+
+    <!-- Permissions -->
+    <string name="perm_notifications_title">Permitir notificaciones</string>
+    <string name="perm_notifications_msg">Visuales necesita permiso para enviarte notificaciones sobre el progreso de tus descargas.</string>
+    <string name="perm_storage_title">Elegir carpeta de descargas</string>
+    <string name="perm_storage_msg">Elige dónde quieres que se guarden las películas y series que descargues.</string>
+
+    <!-- Onboarding -->
+    <string name="onboarding_welcome_title">Bienvenido a Visuales</string>
+    <string name="onboarding_welcome_msg">Descarga películas, series, documentales y cursos del catálogo de la UCLV de forma fácil y rápida.</string>
+    <string name="onboarding_sync_title">Sincronizar catálogo</string>
+    <string name="onboarding_sync_msg">Vamos a descargar el índice completo del catálogo (≈1.5 MB). Así podrás navegar y buscar sin conexión.</string>
+    <string name="onboarding_storage_title">Elegir carpeta de descargas</string>
+    <string name="onboarding_storage_msg">¿Dónde quieres que se guarden tus descargas? Por defecto en /Downloads/Visuales.</string>
+    <string name="onboarding_notifications_title">Permitir notificaciones</string>
+    <string name="onboarding_notifications_msg">Te avisaremos cuando una descarga termine o falle.</string>
+    <string name="onboarding_done_title">¡Todo listo!</string>
+    <string name="onboarding_done_msg">Ya puedes empezar a explorar el catálogo.</string>
+    <string name="onboarding_skip">Saltar</string>
+    <string name="onboarding_next">Siguiente</string>
+    <string name="onboarding_finish">Comenzar</string>
+</resources>
