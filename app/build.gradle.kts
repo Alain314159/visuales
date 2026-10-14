@@ -78,6 +78,9 @@ dependencies {
     implementation(project(":feature:player"))
     implementation(project(":feature:settings"))
 
+    // Material (provides Theme.Material3.* for the XML manifest theme)
+    implementation(libs.material)
+
     // Core
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
