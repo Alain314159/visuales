@@ -123,7 +123,7 @@ class LibraryViewModel @Inject constructor(
      * [Intent.ACTION_VIEW].
      *
      * The file's on-disk path is used directly (it's already absolute).
-     * If the file no longer exists, or no activity can handle `video/*`,
+     * If the file no longer exists, or no activity can handle the video MIME type,
      * a short Toast is shown.
      *
      * @param context any context; the function uses [Context.getApplicationContext].
