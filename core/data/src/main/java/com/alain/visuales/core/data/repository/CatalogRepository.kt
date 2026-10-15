@@ -1,6 +1,7 @@
 package com.alain.visuales.core.data.repository
 
 import com.alain.visuales.core.common.AppConstants
+import com.alain.visuales.core.common.CatalogSortMode
 import com.alain.visuales.core.data.db.dao.DirectoryDao
 import com.alain.visuales.core.data.db.dao.DirectoryEntryDao
 import com.alain.visuales.core.data.db.entity.DirectoryEntity
@@ -58,11 +59,15 @@ class CatalogRepository @Inject constructor(
     /**
      * Fetch the contents of a directory. If cached and fresh, return cache and
      * trigger a background refresh.
+     *
+     * @param sortMode native Apache autoindex sort (?C=X;O=Y). When non-null,
+     *   the sort query param is appended to the URL before scraping.
      */
     fun fetchDirectoryContents(
         dirPath: String,
         dirUrl: String,
-        forceRefresh: Boolean = false
+        forceRefresh: Boolean = false,
+        sortMode: CatalogSortMode = CatalogSortMode.DEFAULT
     ): Flow<FetchResult<List<DirectoryEntryEntity>>> = flow {
         val now = System.currentTimeMillis()
         if (!forceRefresh) {
@@ -72,9 +77,15 @@ class CatalogRepository @Inject constructor(
                 emit(FetchResult.Success(cached, fromCache = true))
             }
         }
-        // Network fetch.
+        // Network fetch — append native sort query param to the URL.
+        val sortedUrl = if (sortMode == CatalogSortMode.DEFAULT) {
+            dirUrl
+        } else {
+            val sep = if (dirUrl.contains('?')) '&' else '?'
+            "$dirUrl${sep}${sortMode.queryParam}"
+        }
         try {
-            val remoteEntries = networkRepo.fetchDirectoryContents(dirUrl)
+            val remoteEntries = networkRepo.fetchDirectoryContents(sortedUrl)
             val entities = remoteEntries.map {
                 DirectoryEntryEntity(
                     parentPath = dirPath,
@@ -94,8 +105,6 @@ class CatalogRepository @Inject constructor(
             directoryEntryDao.upsertAll(entities)
             emit(FetchResult.Success(entities, fromCache = false))
         } catch (e: Exception) {
-            // If we already emitted cache, just emit error (UI already has data).
-            // Otherwise emit error.
             val cached = directoryEntryDao.snapshotFor(dirPath)
             if (cached.isNotEmpty()) {
                 emit(FetchResult.Success(cached, fromCache = true))

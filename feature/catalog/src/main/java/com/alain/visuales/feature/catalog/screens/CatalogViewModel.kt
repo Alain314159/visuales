@@ -3,6 +3,7 @@ package com.alain.visuales.feature.catalog.screens
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.alain.visuales.core.common.CatalogSections
+import com.alain.visuales.core.common.CatalogSortMode
 import com.alain.visuales.core.data.db.dao.SyncStateDao
 import com.alain.visuales.core.data.db.entity.DirectoryEntity
 import com.alain.visuales.core.data.db.entity.DirectoryEntryEntity
@@ -193,6 +194,16 @@ class CatalogViewModel @Inject constructor(
         _searchQuery.value = q
     }
 
+    // -------- Sort mode (native Apache autoindex ?C=X;O=Y) --------
+    private val _sortMode = MutableStateFlow(CatalogSortMode.DEFAULT)
+    val sortMode: StateFlow<CatalogSortMode> = _sortMode.asStateFlow()
+
+    fun setSortMode(mode: CatalogSortMode) {
+        _sortMode.value = mode
+        // Re-fetch with the new sort so the UI updates.
+        forceRefresh()
+    }
+
     /**
      * Force-refresh the current folder: clears the cached entries (forces a network
      * scrape) and re-fetches via [CatalogRepository.fetchDirectoryContents].
@@ -201,7 +212,8 @@ class CatalogViewModel @Inject constructor(
         viewModelScope.launch {
             val path = _currentPath.value
             val dir = repo.getDirectory(path) ?: return@launch
-            repo.fetchDirectoryContents(path, dir.url, forceRefresh = true).collect { /* state reflects via observeEntries */ }
+            repo.fetchDirectoryContents(path, dir.url, forceRefresh = true, sortMode = _sortMode.value)
+                .collect { /* state reflects via observeEntries */ }
         }
     }
 

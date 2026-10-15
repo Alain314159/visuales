@@ -3,6 +3,8 @@ package com.alain.visuales.core.network
 import com.alain.visuales.core.common.AppConstants
 import com.alain.visuales.core.network.api.EmbyApi
 import com.alain.visuales.core.network.download.MultiThreadDownloader
+import com.alain.visuales.core.network.subtitles.SubDbApi
+import com.alain.visuales.core.network.subtitles.SubdivxScraper
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -97,4 +99,12 @@ object NetworkModule {
     @Singleton
     fun provideMultiThreadDownloader(client: OkHttpClient): MultiThreadDownloader =
         MultiThreadDownloader(client)
+
+    @Provides
+    @Singleton
+    fun provideSubDbApi(client: OkHttpClient): SubDbApi = SubDbApi(client)
+
+    @Provides
+    @Singleton
+    fun provideSubdivxScraper(client: OkHttpClient): SubdivxScraper = SubdivxScraper(client)
 }
