@@ -47,7 +47,8 @@ class DownloadRepository @Inject constructor(
     private val downloadDao: DownloadDao,
     private val chunkDao: ChunkDao,
     private val downloader: MultiThreadDownloader,
-    private val settings: SettingsRepository
+    private val settings: SettingsRepository,
+    private val subtitleRepository: SubtitleRepository
 ) {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -230,12 +231,13 @@ class DownloadRepository @Inject constructor(
                                 downloadDao.setStatusAndCompletedAt(
                                     dl.id, DownloadStatus.COMPLETED.name, System.currentTimeMillis()
                                 )
-                                // Auto-download subtitles if configured.
-                                if (dl.subtitleUrl != null) {
-                                    val s = settings.settings.first()
-                                    if (s.autoSubtitles) {
-                                        downloadSubtitle(dl)
-                                    }
+                                // Auto-download subtitles using the cascade:
+                                // sibling → SubDB (hash) → subdivx (scraping).
+                                // Always try (even if subtitleUrl is null) because SubDB
+                                // can resolve by hash and subdivx by name.
+                                val s = settings.settings.first()
+                                if (s.autoSubtitles) {
+                                    downloadSubtitle(dl)
                                 }
                                 pumpQueue()
                             }
@@ -266,23 +268,27 @@ class DownloadRepository @Inject constructor(
     }
 
     /**
-     * Download the subtitle file associated with a download.
+     * Download the subtitle for a completed video using the full cascade:
+     *
+     *  1. Sibling .srt on the visuales server (dl.subtitleUrl)
+     *  2. SubDB by hash (no credentials)
+     *  3. Subdivx scraping (Spanish, no credentials)
+     *
+     * The result file is written next to the video as `<basename>.srt`.
+     * Silently fails if no subtitle is found — subtitles are optional.
      */
     private suspend fun downloadSubtitle(dl: DownloadEntity) {
         try {
-            val subName = dl.name.substringBeforeLast('.') + ".srt"
-            val subFile = File(getDownloadDir(), sanitizeFilename(subName))
-            downloader.download(
-                url = dl.subtitleUrl!!,
-                outputFile = subFile,
-                connections = 2,
-                resumePositions = null,
-                callback = object : DownloadProgressCallback {
-                    override fun onProgress(bytesDownloaded: Long, totalBytes: Long, speedBytesPerSec: Long) {}
-                    override fun onChunkFailed(chunkIndex: Int, attempt: Int, error: Throwable) {}
-                    override fun onCompleted(outputFile: File) {}
-                    override fun onFailed(error: Throwable) {}
-                }
+            val videoFile = getFile(dl)
+            if (!videoFile.exists() || videoFile.length() < 128 * 1024) {
+                // File too small for SubDB hash, and probably not worth fetching.
+                return
+            }
+            subtitleRepository.fetchSpanishSubtitle(
+                videoFile = videoFile,
+                videoName = dl.name,
+                subtitleUrl = dl.subtitleUrl,
+                destinationDir = getDownloadDir()
             )
         } catch (e: Exception) {
             // Silently fail — subtitles are optional.

@@ -12,8 +12,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Sort
 import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.HorizontalDivider
@@ -29,12 +32,15 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.alain.visuales.core.common.CatalogSortMode
 import com.alain.visuales.core.data.db.entity.DirectoryEntity
 import com.alain.visuales.core.data.db.entity.DirectoryEntryEntity
 import com.alain.visuales.core.designsystem.components.EmptyState
@@ -72,8 +78,10 @@ fun BrowseScreen(
     val children by viewModel.currentChildren.collectAsState()
     val entries by viewModel.currentEntries.collectAsState()
     val snackbarMessage by viewModel.snackbarMessage.collectAsState()
+    val sortMode by viewModel.sortMode.collectAsState()
 
     val snackbarHostState = remember { SnackbarHostState() }
+    var sortMenuExpanded by remember { mutableStateOf(false) }
 
     LaunchedEffect(snackbarMessage) {
         val msg = snackbarMessage
@@ -118,6 +126,25 @@ fun BrowseScreen(
                     actions = {
                         IconButton(onClick = { viewModel.forceRefresh() }) {
                             Icon(Icons.Filled.Refresh, contentDescription = "Actualizar")
+                        }
+                        Box {
+                            IconButton(onClick = { sortMenuExpanded = true }) {
+                                Icon(Icons.Filled.Sort, contentDescription = "Ordenar")
+                            }
+                            DropdownMenu(
+                                expanded = sortMenuExpanded,
+                                onDismissRequest = { sortMenuExpanded = false }
+                            ) {
+                                CatalogSortMode.entries.forEach { mode ->
+                                    DropdownMenuItem(
+                                        text = { Text(mode.displayLabel) },
+                                        onClick = {
+                                            viewModel.setSortMode(mode)
+                                            sortMenuExpanded = false
+                                        }
+                                    )
+                                }
+                            }
                         }
                     }
                 )
