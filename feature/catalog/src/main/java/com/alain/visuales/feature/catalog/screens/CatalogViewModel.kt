@@ -6,9 +6,12 @@ import com.alain.visuales.core.common.CatalogSections
 import com.alain.visuales.core.data.db.dao.SyncStateDao
 import com.alain.visuales.core.data.db.entity.DirectoryEntity
 import com.alain.visuales.core.data.db.entity.DirectoryEntryEntity
+import com.alain.visuales.core.data.db.entity.EmbyItemEntity
 import com.alain.visuales.core.data.db.entity.SyncStateEntity
+import com.alain.visuales.core.data.preferences.SettingsRepository
 import com.alain.visuales.core.data.repository.CatalogRepository
 import com.alain.visuales.core.data.repository.DownloadRepository
+import com.alain.visuales.core.data.repository.EmbyRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -19,6 +22,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.stateIn
@@ -37,7 +41,9 @@ import javax.inject.Inject
 class CatalogViewModel @Inject constructor(
     private val repo: CatalogRepository,
     private val syncStateDao: SyncStateDao,
-    private val downloadRepo: DownloadRepository
+    private val downloadRepo: DownloadRepository,
+    private val embyRepo: EmbyRepository,
+    private val settingsRepo: SettingsRepository
 ) : ViewModel() {
 
     // -------- Browse state --------
@@ -94,6 +100,50 @@ class CatalogViewModel @Inject constructor(
 
     private val _isRefreshing = MutableStateFlow(false)
     val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
+
+    // -------- Emby enrichment --------
+
+    /**
+     * Per-directory-path Emby metadata. Updated asynchronously as the UI asks
+     * for lookups via [requestEmbyLookup]. `null` means "not yet known / no
+     * match"; the UI should show a placeholder poster in that case.
+     */
+    private val _embyPosters = MutableStateFlow<Map<String, EmbyItemEntity?>>(emptyMap())
+    val embyPosters: StateFlow<Map<String, EmbyItemEntity?>> = _embyPosters.asStateFlow()
+
+    /** Paths already enqueued for an Emby lookup in this VM lifetime. */
+    private val embyLookedUp = mutableSetOf<String>()
+
+    /**
+     * Fire-and-forget: ask the Emby layer to enrich [path]. Reads from cache
+     * first (one-shot), falls back to a network search + cache write if there
+     * is no fresh entry. Updates [embyPosters] as data arrives. No-op if Emby
+     * is disabled in settings.
+     */
+    fun requestEmbyLookup(path: String) {
+        if (!embyLookedUp.add(path)) return  // already in flight
+        viewModelScope.launch {
+            // Honor the global toggle.
+            val enabled = settingsRepo.settings.first().embyEnabled
+            if (!enabled) return@launch
+
+            // One-shot cache read first (cheaper than a Room flow subscribe).
+            val cached = runCatching { embyRepo.lookupByPath(path).first() }.getOrNull()
+            if (cached != null) {
+                _embyPosters.value = _embyPosters.value + (path to cached)
+                return@launch
+            }
+            // Cache miss → network search + write.
+            val refreshed = runCatching { embyRepo.refreshByPath(path) }.getOrNull()
+            _embyPosters.value = _embyPosters.value + (path to refreshed)
+        }
+    }
+
+    /** Convenience: build a Coil-loadable poster URL for a cached Emby item. */
+    fun posterUrlFor(path: String): String? {
+        val entity = _embyPosters.value[path] ?: return null
+        return embyRepo.posterUrl(entity.itemId, entity.posterTag)
+    }
 
     // -------- Search state --------
 

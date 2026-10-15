@@ -35,6 +35,7 @@ dependencies {
     implementation(libs.okhttp)
     implementation(libs.okhttp.logging)
     implementation(libs.retrofit)
+    implementation(libs.retrofit.serialization.converter)
 
     // HTML parsing
     implementation(libs.jsoup)

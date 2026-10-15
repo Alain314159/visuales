@@ -10,6 +10,7 @@ import com.alain.visuales.core.data.db.dao.ChunkDao
 import com.alain.visuales.core.data.db.dao.DirectoryDao
 import com.alain.visuales.core.data.db.dao.DirectoryEntryDao
 import com.alain.visuales.core.data.db.dao.DownloadDao
+import com.alain.visuales.core.data.db.dao.EmbyItemDao
 import com.alain.visuales.core.data.db.dao.LibraryDao
 import com.alain.visuales.core.data.db.dao.SyncStateDao
 import com.alain.visuales.core.data.db.entity.ChunkEntity
@@ -18,6 +19,7 @@ import com.alain.visuales.core.data.db.entity.DirectoryEntryEntity
 import com.alain.visuales.core.data.db.entity.DownloadEntity
 import com.alain.visuales.core.data.db.entity.DownloadPriority
 import com.alain.visuales.core.data.db.entity.DownloadStatus
+import com.alain.visuales.core.data.db.entity.EmbyItemEntity
 import com.alain.visuales.core.data.db.entity.LibraryItemEntity
 import com.alain.visuales.core.data.db.entity.SyncStateEntity
 import dagger.Module
@@ -28,7 +30,7 @@ import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
 
 @Database(
-    version = 1,
+    version = 2,
     exportSchema = true,
     entities = [
         DirectoryEntity::class,
@@ -36,7 +38,8 @@ import javax.inject.Singleton
         DownloadEntity::class,
         ChunkEntity::class,
         LibraryItemEntity::class,
-        SyncStateEntity::class
+        SyncStateEntity::class,
+        EmbyItemEntity::class
     ]
 )
 @TypeConverters(VisualesConverters::class)
@@ -47,6 +50,7 @@ abstract class VisualesDatabase : RoomDatabase() {
     abstract fun chunkDao(): ChunkDao
     abstract fun libraryDao(): LibraryDao
     abstract fun syncStateDao(): SyncStateDao
+    abstract fun embyItemDao(): EmbyItemDao
 
     companion object {
         const val NAME = "visuales.db"
@@ -95,4 +99,7 @@ object DatabaseModule {
 
     @Provides
     fun provideSyncStateDao(db: VisualesDatabase): SyncStateDao = db.syncStateDao()
+
+    @Provides
+    fun provideEmbyItemDao(db: VisualesDatabase): EmbyItemDao = db.embyItemDao()
 }

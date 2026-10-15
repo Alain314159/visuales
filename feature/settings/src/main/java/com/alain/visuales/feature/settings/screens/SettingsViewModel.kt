@@ -82,6 +82,7 @@ class SettingsViewModel @Inject constructor(
     fun setSyncIntervalHours(hours: Long) = viewModelScope.launch { repo.setSyncIntervalHours(hours) }
     fun setDeepScraping(enabled: Boolean) = viewModelScope.launch { repo.setDeepScraping(enabled) }
     fun setEnrichedMetadata(enabled: Boolean) = viewModelScope.launch { repo.setEnrichedMetadata(enabled) }
+    fun setEmbyEnabled(enabled: Boolean) = viewModelScope.launch { repo.setEmbyEnabled(enabled) }
 
     // --- Descargas ---
 
@@ -172,5 +173,6 @@ class SettingsViewModel @Inject constructor(
         repo.setNotifAppUpdates(true)
         repo.setThemeMode(ThemeMode.SYSTEM)
         repo.setDynamicColor(true)
+        repo.setEmbyEnabled(true)
     }
 }

@@ -1,13 +1,17 @@
 package com.alain.visuales.core.network
 
 import com.alain.visuales.core.common.AppConstants
+import com.alain.visuales.core.network.api.EmbyApi
 import com.alain.visuales.core.network.download.MultiThreadDownloader
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
+import kotlinx.serialization.json.Json
+import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
+import retrofit2.converter.kotlinx.serialization.asConverterFactory
 import java.util.concurrent.TimeUnit
 import javax.inject.Singleton
 
@@ -54,6 +58,40 @@ object NetworkModule {
             .baseUrl(AppConstants.DEFAULT_BASE_URL + "/")
             .client(client)
             .build()
+
+    /**
+     * Lenient Json instance for Emby. The Emby 4.9.3.0 server returns a huge
+     * object per item with many fields we don't care about; `ignoreUnknownKeys`
+     * makes deserialization resilient to additions.
+     */
+    @Provides
+    @Singleton
+    fun provideEmbyJson(): Json = Json {
+        ignoreUnknownKeys = true
+        coerceInputValues = true
+        explicitNulls = false
+    }
+
+    /**
+     * A separate Retrofit instance for the Emby JSON API. Unlike the main
+     * retrofit (which only deals with raw HTML strings) this one wires the
+     * kotlinx-serialization converter so `@Body` / return-type DTOs are
+     * (de)serialized automatically.
+     */
+    @Provides
+    @Singleton
+    fun provideEmbyApi(
+        client: OkHttpClient,
+        json: Json
+    ): EmbyApi {
+        val contentType = "application/json".toMediaType()
+        val retrofit = retrofit2.Retrofit.Builder()
+            .baseUrl("https://emby.uclv.cu/emby/")
+            .client(client)
+            .addConverterFactory(json.asConverterFactory(contentType))
+            .build()
+        return retrofit.create(EmbyApi::class.java)
+    }
 
     @Provides
     @Singleton

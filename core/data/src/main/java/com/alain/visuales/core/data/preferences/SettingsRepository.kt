@@ -56,7 +56,11 @@ class SettingsRepository @Inject constructor(
             themeMode = ThemeMode.valueOf(p[KEY_THEME_MODE] ?: ThemeMode.SYSTEM.name),
             dynamicColor = p[KEY_DYNAMIC_COLOR] ?: true,
             onboardingCompleted = p[KEY_ONBOARDING_COMPLETED] ?: false,
-            lastSyncShownAt = p[KEY_LAST_SYNC_SHOWN_AT] ?: 0L
+            lastSyncShownAt = p[KEY_LAST_SYNC_SHOWN_AT] ?: 0L,
+            embyEnabled = p[KEY_EMBY_ENABLED] ?: true,
+            embyToken = p[KEY_EMBY_TOKEN],
+            embyUserId = p[KEY_EMBY_USER_ID],
+            embyDeviceId = p[KEY_EMBY_DEVICE_ID]
         )
     }
 
@@ -95,6 +99,24 @@ class SettingsRepository @Inject constructor(
     suspend fun setOnboardingCompleted(completed: Boolean) = dataStore.edit { it[KEY_ONBOARDING_COMPLETED] = completed }
     suspend fun markSyncShown(now: Long = System.currentTimeMillis()) = dataStore.edit { it[KEY_LAST_SYNC_SHOWN_AT] = now }
 
+    // --- Emby integration ---
+
+    /** Whether Emby lookups (poster / overview / genres) are enabled. */
+    suspend fun setEmbyEnabled(enabled: Boolean) = dataStore.edit { it[KEY_EMBY_ENABLED] = enabled }
+
+    /** Persist the Emby access token. `null` clears the value. */
+    suspend fun setEmbyToken(token: String?) = dataStore.edit {
+        if (token == null) it.remove(KEY_EMBY_TOKEN) else it[KEY_EMBY_TOKEN] = token
+    }
+
+    /** Persist the Emby user id. `null` clears the value. */
+    suspend fun setEmbyUserId(id: String?) = dataStore.edit {
+        if (id == null) it.remove(KEY_EMBY_USER_ID) else it[KEY_EMBY_USER_ID] = id
+    }
+
+    /** Persist the per-install device id (generated once). */
+    suspend fun setEmbyDeviceId(id: String) = dataStore.edit { it[KEY_EMBY_DEVICE_ID] = id }
+
     companion object {
         private val KEY_BASE_URL = stringPreferencesKey("base_url")
         private val KEY_SYNC_INTERVAL_HOURS = longPreferencesKey("sync_interval_hours")
@@ -126,6 +148,10 @@ class SettingsRepository @Inject constructor(
         private val KEY_DYNAMIC_COLOR = booleanPreferencesKey("dynamic_color")
         private val KEY_ONBOARDING_COMPLETED = booleanPreferencesKey("onboarding_completed")
         private val KEY_LAST_SYNC_SHOWN_AT = longPreferencesKey("last_sync_shown_at")
+        private val KEY_EMBY_ENABLED = booleanPreferencesKey("emby_enabled")
+        private val KEY_EMBY_TOKEN = stringPreferencesKey("emby_token")
+        private val KEY_EMBY_USER_ID = stringPreferencesKey("emby_user_id")
+        private val KEY_EMBY_DEVICE_ID = stringPreferencesKey("emby_device_id")
     }
 }
 
@@ -159,7 +185,15 @@ data class UserSettings(
     val themeMode: ThemeMode,
     val dynamicColor: Boolean,
     val onboardingCompleted: Boolean,
-    val lastSyncShownAt: Long
+    val lastSyncShownAt: Long,
+    /** Whether Emby lookups (poster / overview / genres) are enabled. */
+    val embyEnabled: Boolean = true,
+    /** Cached Emby access token (cleared on logout). */
+    val embyToken: String? = null,
+    /** Cached Emby user id. */
+    val embyUserId: String? = null,
+    /** Per-install device id used for X-Emby-Device-Id. */
+    val embyDeviceId: String? = null
 )
 
 enum class ThemeMode { SYSTEM, LIGHT, DARK }

@@ -240,6 +240,13 @@ fun SettingsScreen(
                         onChange = viewModel::setEnrichedMetadata,
                         icon = Icons.Outlined.CloudSync
                     )
+                    ToggleRow(
+                        title = "Usar Emby para metadatos",
+                        subtitle = "Portadas, sinopsis y géneros desde emby.uclv.cu",
+                        checked = settings.embyEnabled,
+                        onChange = viewModel::setEmbyEnabled,
+                        icon = Icons.Outlined.VideoLibrary
+                    )
                     ClickableRow(
                         title = "Última sincronización",
                         subtitle = formatSyncTimestamp(settings.lastSyncShownAt),
