@@ -114,14 +114,17 @@ class SubdivxScraper @Inject constructor(
 
             // Extract the subtitle id from href like "down2.php?num=123456"
             val href = downloadLink?.attr("href").orEmpty()
-            val idMatch = Regex("num=(\\d+)").find(href)
-                ?: Regex("descargar\\((\\d+),(\\d+)").find(downloadLink?.attr("onclick").orEmpty())
-                ?.let { it.groupValues[2] }
-                ?: continue
+            var idMatch: String? = Regex("num=(\\d+)").find(href)?.groupValues?.get(1)
+            if (idMatch == null) {
+                val onclick = downloadLink?.attr("onclick").orEmpty()
+                val m = Regex("descargar\\((\\d+),(\\d+)").find(onclick)
+                if (m != null) idMatch = m.groupValues[2]
+            }
+            if (idMatch == null) continue
 
             results.add(
                 SubdivxResult(
-                    id = idMatch,
+                    id = idMatch!!,
                     title = title,
                     downloadUrl = "$baseUrl/down2.php?num=$idMatch"
                 )
