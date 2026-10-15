@@ -51,6 +51,15 @@ interface DirectoryDao {
     @Query("SELECT COUNT(*) FROM directories WHERE added_at > :since")
     suspend fun countAddedSince(since: Long): Int
 
+    /**
+     * Bulk fetch all directories (just path + addedAt).
+     *
+     * Used by ListadoSyncWorker to preserve the original addedAt timestamps
+     * across syncs without issuing 30k individual getByPath() calls.
+     */
+    @Query("SELECT * FROM directories")
+    suspend fun getAll(): List<DirectoryEntity>
+
     @Query("UPDATE directories SET is_stale = 1 WHERE path NOT IN (:alivePaths)")
     suspend fun markStale(alivePaths: List<String>)
 

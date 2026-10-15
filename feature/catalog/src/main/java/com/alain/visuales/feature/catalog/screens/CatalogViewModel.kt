@@ -229,11 +229,13 @@ class CatalogViewModel @Inject constructor(
     fun enqueueDownload(entry: DirectoryEntryEntity) {
         viewModelScope.launch {
             val section = entry.parentPath.trim('/').substringBefore('/', "").ifBlank { null }
+            // Try to find a sibling .srt subtitle in the same folder (if we have the listing).
+            val siblingSubtitleUrl = findSiblingSubtitleUrl(entry)
             downloadRepo.enqueue(
                 url = entry.url,
                 name = entry.name,
                 size = entry.size,
-                subtitleUrl = null,
+                subtitleUrl = siblingSubtitleUrl,
                 section = section
             )
             _snackbarMessage.value = "Añadido a la cola: ${entry.name}"
@@ -251,12 +253,32 @@ class CatalogViewModel @Inject constructor(
                     url = entry.url,
                     name = entry.name,
                     size = entry.size,
+                    subtitleUrl = findSiblingSubtitleUrl(entry),
                     section = section
                 )
             }
             val ids = downloadRepo.enqueueBatch(items)
             _snackbarMessage.value = "Añadido a la cola: ${ids.size} archivo(s)"
         }
+    }
+
+    /**
+     * Find the URL of a sibling .srt subtitle for [video].
+     *
+     * Looks in the current cached directory listing for an .srt file whose
+     * basename matches the video's basename. Returns the absolute URL or null.
+     */
+    private suspend fun findSiblingSubtitleUrl(video: DirectoryEntryEntity): String? {
+        val videoBase = video.name.substringBeforeLast('.').lowercase()
+        if (videoBase.isBlank()) return null
+        // Look at the entries cached for the same parent path.
+        val siblings = repo.observeEntries(video.parentPath).first()
+        return siblings
+            .firstOrNull { e ->
+                !e.isDirectory &&
+                    e.type == "SUBTITLE" &&
+                    e.name.substringBeforeLast('.').lowercase() == videoBase
+            }?.url
     }
 
     /**

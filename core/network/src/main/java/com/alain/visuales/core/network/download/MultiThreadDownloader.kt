@@ -92,11 +92,16 @@ class MultiThreadDownloader @Inject constructor(
             return@withContext
         }
 
+        // Reduce chunk count for small files: avoid creating more chunks than bytes.
+        val safeConnections = effectiveConnections.coerceAtMost(
+            ((totalSize / 1024).toInt().coerceAtLeast(1)).coerceAtMost(effectiveConnections)
+        )
+
         // Stage 2: prepare chunks.
-        val chunkSize: Long = totalSize / effectiveConnections
-        val chunks = (0 until effectiveConnections).map { i ->
+        val chunkSize: Long = totalSize / safeConnections
+        val chunks = (0 until safeConnections).map { i ->
             val start: Long = i.toLong() * chunkSize
-            val end: Long = if (i == effectiveConnections - 1) totalSize - 1L else (start + chunkSize - 1L)
+            val end: Long = if (i == safeConnections - 1) totalSize - 1L else (start + chunkSize - 1L)
             val resumeFrom: Long = resumePositions?.getOrNull(i)?.coerceIn(start, end + 1L) ?: start
             ChunkState(i, start, end, AtomicLong(resumeFrom))
         }

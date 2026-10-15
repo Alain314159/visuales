@@ -193,10 +193,13 @@ class DownloadRepository @Inject constructor(
 
                 // Pre-create chunks for resume support.
                 if (existingChunks.isEmpty() && dl.size > 0) {
-                    val chunkSize = dl.size / connections
-                    val chunks = (0 until connections).map { i ->
+                    val safeConnections = connections.coerceAtMost(
+                        ((dl.size / 1024).toInt().coerceAtLeast(1)).coerceAtMost(connections)
+                    )
+                    val chunkSize = dl.size / safeConnections
+                    val chunks = (0 until safeConnections).map { i ->
                         val start = i * chunkSize.toLong()
-                        val end = if (i == connections - 1) dl.size - 1 else (start + chunkSize - 1)
+                        val end = if (i == safeConnections - 1) dl.size - 1 else (start + chunkSize - 1)
                         ChunkEntity(
                             downloadId = dl.id,
                             index = i,

@@ -64,8 +64,15 @@ class ListadoSyncWorker @AssistedInject constructor(
             val remoteDirs = networkRepo.fetchDirectoryTree(baseUrl)
             val now = System.currentTimeMillis()
 
-            // Compute child counts from the tree.
+            // Compute child counts from the tree (single pass).
             val childCountMap = remoteDirs.groupingBy { it.parentPath }.eachCount()
+
+            // Bulk fetch existing addedAt timestamps to preserve them (1 query instead of 30k).
+            val existingAddedAt: Map<String, Long> = try {
+                directoryDao.getAll().associate { it.path to it.addedAt }
+            } catch (e: Exception) {
+                emptyMap()
+            }
 
             val entities = remoteDirs.map { rd ->
                 DirectoryEntity(
@@ -77,28 +84,14 @@ class ListadoSyncWorker @AssistedInject constructor(
                     section = rd.section,
                     subcategory = rd.subcategory,
                     childCount = childCountMap[rd.path] ?: 0,
-                    addedAt = now,  // first time we see it (will be overwritten if it existed)
+                    addedAt = existingAddedAt[rd.path] ?: now,
                     lastSeenAt = now,
                     isStale = false
                 )
             }
 
-            // Compute diff: which paths existed before vs now.
-            val newPaths = entities.map { it.path }.toSet()
-            val prevPaths = prevState?.let {
-                // For addedAt preservation we need to query the DB.
-                emptySet<String>()  // we'll just rely on Room's REPLACE; addedAt will update.
-            }
-
-            // Preserve addedAt for already-known directories.
-            val preserved = entities.map { e ->
-                // If the path was already there, keep its addedAt.
-                val existing = directoryDao.getByPath(e.path)
-                if (existing != null) e.copy(addedAt = existing.addedAt) else e
-            }
-
             // Bulk upsert + mark stale + delete stale.
-            directoryDao.syncReplaceAll(preserved, now)
+            directoryDao.syncReplaceAll(entities, now)
 
             // 3. Update sync state.
             val newState = SyncStateEntity(
@@ -107,9 +100,9 @@ class ListadoSyncWorker @AssistedInject constructor(
                 listadoEtag = meta.etag,
                 listadoLastModified = meta.lastModified,
                 listadoSize = meta.contentLength,
-                totalDirectories = preserved.size,
-                newDirectoriesLastSync = preserved.count { it.addedAt == now },
-                removedDirectoriesLastSync = 0,  // populated by syncReplaceAll indirectly
+                totalDirectories = entities.size,
+                newDirectoriesLastSync = entities.count { it.addedAt == now },
+                removedDirectoriesLastSync = 0,
                 lastError = null
             )
             syncStateDao.upsert(newState)
@@ -118,7 +111,17 @@ class ListadoSyncWorker @AssistedInject constructor(
         } catch (e: Exception) {
             // Save the error in sync_state.
             val now = System.currentTimeMillis()
-            val cur = syncStateDao.get() ?: SyncStateEntity(id = 0)
+            val cur = syncStateDao.get() ?: SyncStateEntity(
+                id = 0,
+                lastSyncAt = now,
+                listadoEtag = null,
+                listadoLastModified = null,
+                listadoSize = 0,
+                totalDirectories = 0,
+                newDirectoriesLastSync = 0,
+                removedDirectoriesLastSync = 0,
+                lastError = null
+            )
             syncStateDao.upsert(cur.copy(lastSyncAt = now, lastError = e.message ?: e.toString()))
             // Retry with backoff.
             Result.retry()

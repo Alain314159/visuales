@@ -103,6 +103,11 @@ fun BrowseScreen(
     }
     val isLoading = currentDirectory == null && items.isEmpty()
 
+    // Trigger Emby lookups for visible directories so posters load lazily.
+    LaunchedEffect(children) {
+        children.take(30).forEach { dir -> viewModel.requestEmbyLookup(dir.path) }
+    }
+
     Scaffold(
         modifier = modifier.fillMaxSize(),
         topBar = {

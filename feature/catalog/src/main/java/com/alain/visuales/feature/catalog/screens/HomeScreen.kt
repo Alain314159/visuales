@@ -22,6 +22,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -66,6 +67,14 @@ fun HomeScreen(
     val hero = recentlyAdded.firstOrNull()
     val hasContent = homeSections.values.any { it.isNotEmpty() } || hero != null
     val isSyncing = syncState == null || (syncState?.lastSyncAt == null)
+
+    // Trigger Emby lookups for the visible items so posters load lazily.
+    LaunchedEffect(hero, homeSections) {
+        hero?.let { viewModel.requestEmbyLookup(it.path) }
+        homeSections.values.flatten().take(40).forEach { dir ->
+            viewModel.requestEmbyLookup(dir.path)
+        }
+    }
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
