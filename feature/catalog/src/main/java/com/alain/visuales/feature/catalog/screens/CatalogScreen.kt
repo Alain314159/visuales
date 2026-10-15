@@ -21,6 +21,7 @@ fun CatalogScreen(modifier: Modifier = Modifier) {
     HomeScreen(
         modifier = modifier,
         onDirectoryClick = {},
-        onSearchClick = {}
+        onSearchClick = {},
+        onSettingsClick = {}
     )
 }
