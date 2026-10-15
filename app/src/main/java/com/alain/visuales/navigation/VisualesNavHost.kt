@@ -113,6 +113,7 @@ fun VisualesNavHost(modifier: Modifier = Modifier) {
         }
     ) { padding ->
         val startDest = if (onboardingCompleted) CATALOG_GRAPH else ONBOARDING_ROUTE
+        val context = androidx.compose.ui.platform.LocalContext.current
         NavHost(
             navController = navController,
             startDestination = startDest,
@@ -121,7 +122,7 @@ fun VisualesNavHost(modifier: Modifier = Modifier) {
             composable(ONBOARDING_ROUTE) {
                 OnboardingScreen(
                     onCompleted = {
-                        navViewModel.markOnboardingCompleted(androidx.compose.ui.platform.LocalContext.current)
+                        navViewModel.markOnboardingCompleted(context)
                         navController.navigate(CATALOG_GRAPH) {
                             popUpTo(ONBOARDING_ROUTE) { inclusive = true }
                         }
