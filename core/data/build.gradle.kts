@@ -33,6 +33,9 @@ dependencies {
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.kotlinx.serialization.json)
 
+    // OkHttp (used by SubtitleRepository for direct .srt download from visuales)
+    implementation(libs.okhttp)
+
     // Room
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
