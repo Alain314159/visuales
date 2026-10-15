@@ -53,6 +53,9 @@ fun NavGraphBuilder.catalogGraph(navController: NavHostController) {
                 },
                 onSearchClick = {
                     navController.navigate(CATALOG_SEARCH_ROUTE)
+                },
+                onSettingsClick = {
+                    navController.navigate("settings-graph")
                 }
             )
         }

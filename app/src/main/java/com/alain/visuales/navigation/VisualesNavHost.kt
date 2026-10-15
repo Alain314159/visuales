@@ -13,10 +13,14 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
@@ -26,6 +30,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navOptions
 import com.alain.visuales.R
+import com.alain.visuales.core.data.preferences.SettingsRepository
 import com.alain.visuales.feature.catalog.navigation.catalogGraph
 import com.alain.visuales.feature.catalog.navigation.CATALOG_GRAPH
 import com.alain.visuales.feature.catalog.navigation.CATALOG_HOME_ROUTE
@@ -35,10 +40,34 @@ import com.alain.visuales.feature.library.navigation.libraryGraph
 import com.alain.visuales.feature.settings.navigation.settingsGraph
 import com.alain.visuales.feature.settings.navigation.SETTINGS_ROUTE
 import com.alain.visuales.onboarding.OnboardingScreen
+import com.alain.visuales.sync.listado.worker.ListadoSyncWorker
+import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
+import javax.inject.Inject
+
+@HiltViewModel
+class NavRootViewModel @Inject constructor(
+    private val settings: SettingsRepository
+) : ViewModel() {
+    val onboardingCompleted: StateFlow<Boolean> = settings.settings
+        .map { it.onboardingCompleted }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+
+    fun markOnboardingCompleted(context: android.content.Context) {
+        viewModelScope.launch {
+            settings.setOnboardingCompleted(true)
+            ListadoSyncWorker.runNow(context)
+        }
+    }
+}
 
 /**
  * Root navigation: bottom bar with 4 tabs (Home, Search, Downloads, Library)
- * + Settings reachable from top of any screen.
+ * + Settings reachable from the top bar of any screen.
  *
  * Onboarding is shown first if user hasn't completed it yet.
  */
@@ -47,6 +76,8 @@ fun VisualesNavHost(modifier: Modifier = Modifier) {
     val navController = rememberNavController()
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = backStackEntry?.destination
+    val navViewModel: NavRootViewModel = hiltViewModel()
+    val onboardingCompleted by navViewModel.onboardingCompleted.collectAsState()
 
     val showBottomBar = currentDestination?.route?.let { route ->
         TopLevelDestination.entries.any { it.graphRoute == route || route.startsWith("${it.graphRoute}/") }
@@ -55,7 +86,7 @@ fun VisualesNavHost(modifier: Modifier = Modifier) {
     Scaffold(
         modifier = modifier,
         bottomBar = {
-            if (showBottomBar) {
+            if (showBottomBar && onboardingCompleted) {
                 NavigationBar {
                     TopLevelDestination.entries.forEach { dest ->
                         val selected = currentDestination?.hierarchy?.any { it.route == dest.graphRoute } == true
@@ -81,14 +112,16 @@ fun VisualesNavHost(modifier: Modifier = Modifier) {
             }
         }
     ) { padding ->
+        val startDest = if (onboardingCompleted) CATALOG_GRAPH else ONBOARDING_ROUTE
         NavHost(
             navController = navController,
-            startDestination = CATALOG_GRAPH,
+            startDestination = startDest,
             modifier = Modifier.padding(padding)
         ) {
             composable(ONBOARDING_ROUTE) {
                 OnboardingScreen(
                     onCompleted = {
+                        navViewModel.markOnboardingCompleted(androidx.compose.ui.platform.LocalContext.current)
                         navController.navigate(CATALOG_GRAPH) {
                             popUpTo(ONBOARDING_ROUTE) { inclusive = true }
                         }
@@ -115,3 +148,4 @@ enum class TopLevelDestination(
     DOWNLOADS("downloads", Icons.Outlined.Download, R.string.nav_downloads),
     LIBRARY("library", Icons.Outlined.VideoLibrary, R.string.nav_library);
 }
+

@@ -89,7 +89,7 @@ class CatalogViewModel @Inject constructor(
             if (section == CatalogSections.RECIENTES) {
                 repo.observeRecentlyAdded(20)
             } else {
-                repo.observeChildren("/$section/")
+                repo.observeChildren("/$section")
             }
         }
     ) { arrays ->

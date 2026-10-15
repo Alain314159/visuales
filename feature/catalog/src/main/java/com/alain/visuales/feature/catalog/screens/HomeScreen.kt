@@ -12,6 +12,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.outlined.Movie
+import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -53,6 +54,7 @@ import java.util.Locale
 fun HomeScreen(
     onDirectoryClick: (String) -> Unit,
     onSearchClick: () -> Unit,
+    onSettingsClick: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: CatalogViewModel = hiltViewModel()
 ) {
@@ -63,6 +65,7 @@ fun HomeScreen(
 
     val hero = recentlyAdded.firstOrNull()
     val hasContent = homeSections.values.any { it.isNotEmpty() } || hero != null
+    val isSyncing = syncState == null || (syncState?.lastSyncAt == null)
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
@@ -75,6 +78,9 @@ fun HomeScreen(
                     }
                     IconButton(onClick = { viewModel.triggerHomeRefresh() }) {
                         Icon(Icons.Filled.Refresh, contentDescription = "Actualizar")
+                    }
+                    IconButton(onClick = onSettingsClick) {
+                        Icon(Icons.Outlined.Settings, contentDescription = "Ajustes")
                     }
                 }
             )
@@ -94,8 +100,11 @@ fun HomeScreen(
                 ) {
                     EmptyState(
                         icon = Icons.Outlined.Movie,
-                        title = "Sin contenido",
-                        message = "Tira hacia abajo para sincronizar el catálogo o espera a que termine la sincronización inicial."
+                        title = if (isSyncing) "Sincronizando catálogo…" else "Sin contenido",
+                        message = if (isSyncing)
+                            "Descargando el índice del servidor UCLV (≈1.5 MB). Esto puede tardar un minuto."
+                        else
+                            "Tira hacia abajo para sincronizar el catálogo o verifica tu conexión."
                     )
                 }
             } else {
