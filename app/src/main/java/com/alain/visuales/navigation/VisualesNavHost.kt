@@ -60,7 +60,8 @@ class NavRootViewModel @Inject constructor(
     fun markOnboardingCompleted(context: android.content.Context) {
         viewModelScope.launch {
             settings.setOnboardingCompleted(true)
-            ListadoSyncWorker.runNow(context)
+            // Also schedule the background periodic sync via WorkManager.
+            ListadoSyncWorker.schedule(context)
         }
     }
 }

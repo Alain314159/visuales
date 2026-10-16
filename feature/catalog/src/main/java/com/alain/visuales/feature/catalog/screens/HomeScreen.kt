@@ -68,6 +68,13 @@ fun HomeScreen(
     val hasContent = homeSections.values.any { it.isNotEmpty() } || hero != null
     val isSyncing = syncState == null || (syncState?.lastSyncAt == null)
 
+    // Auto-trigger initial sync if no content and no sync has been attempted yet.
+    LaunchedEffect(hasContent, isSyncing) {
+        if (!hasContent && isSyncing && !isRefreshing) {
+            viewModel.triggerInitialSync()
+        }
+    }
+
     // Trigger Emby lookups for the visible items so posters load lazily.
     LaunchedEffect(hero, homeSections) {
         hero?.let { viewModel.requestEmbyLookup(it.path) }
@@ -107,11 +114,14 @@ fun HomeScreen(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
                 ) {
+                    val syncError = syncState?.lastError
                     EmptyState(
                         icon = Icons.Outlined.Movie,
                         title = if (isSyncing) "Sincronizando catálogo…" else "Sin contenido",
                         message = if (isSyncing)
                             "Descargando el índice del servidor UCLV (≈1.5 MB). Esto puede tardar un minuto."
+                        else if (syncError != null)
+                            "Error al sincronizar: $syncError\n\nTira hacia abajo para reintentar."
                         else
                             "Tira hacia abajo para sincronizar el catálogo o verifica tu conexión."
                     )

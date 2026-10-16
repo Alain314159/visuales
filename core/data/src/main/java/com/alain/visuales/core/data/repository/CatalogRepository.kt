@@ -4,12 +4,16 @@ import com.alain.visuales.core.common.AppConstants
 import com.alain.visuales.core.common.CatalogSortMode
 import com.alain.visuales.core.data.db.dao.DirectoryDao
 import com.alain.visuales.core.data.db.dao.DirectoryEntryDao
+import com.alain.visuales.core.data.db.dao.SyncStateDao
 import com.alain.visuales.core.data.db.entity.DirectoryEntity
 import com.alain.visuales.core.data.db.entity.DirectoryEntryEntity
+import com.alain.visuales.core.data.db.entity.SyncStateEntity
 import com.alain.visuales.core.network.api.VisualesRepository
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -26,8 +30,75 @@ import javax.inject.Singleton
 class CatalogRepository @Inject constructor(
     private val directoryDao: DirectoryDao,
     private val directoryEntryDao: DirectoryEntryDao,
-    private val networkRepo: VisualesRepository
+    private val networkRepo: VisualesRepository,
+    private val syncStateDao: SyncStateDao
 ) {
+
+    // ---------------- Direct sync (bypasses WorkManager) ----------------
+
+    /**
+     * Synchronously fetch listado.html, parse it, and populate Room.
+     *
+     * This bypasses WorkManager entirely — called directly from a coroutine
+     * in the ViewModel. Used for the initial sync after onboarding and for
+     * manual "refresh" pulls.
+     *
+     * @param baseUrl the server base URL (default from AppConstants).
+     * @return the number of directories synced, or -1 on error.
+     */
+    suspend fun syncNow(baseUrl: String = AppConstants.DEFAULT_BASE_URL): Int = withContext(Dispatchers.IO) {
+        try {
+            val remoteDirs = networkRepo.fetchDirectoryTree(baseUrl)
+            val now = System.currentTimeMillis()
+            val childCountMap = remoteDirs.groupingBy { it.parentPath }.eachCount()
+
+            val existingAddedAt: Map<String, Long> = try {
+                directoryDao.getAll().associate { it.path to it.addedAt }
+            } catch (e: Exception) { emptyMap() }
+
+            val entities = remoteDirs.map { rd ->
+                DirectoryEntity(
+                    path = rd.path,
+                    url = rd.url,
+                    name = rd.name,
+                    parentPath = rd.parentPath,
+                    depth = rd.depth,
+                    section = rd.section,
+                    subcategory = rd.subcategory,
+                    childCount = childCountMap[rd.path] ?: 0,
+                    addedAt = existingAddedAt[rd.path] ?: now,
+                    lastSeenAt = now,
+                    isStale = false
+                )
+            }
+
+            directoryDao.syncReplaceAll(entities, now)
+
+            val newState = SyncStateEntity(
+                id = 0,
+                lastSyncAt = now,
+                listadoEtag = null,
+                listadoLastModified = null,
+                listadoSize = 0,
+                totalDirectories = entities.size,
+                newDirectoriesLastSync = entities.count { it.addedAt == now },
+                removedDirectoriesLastSync = 0,
+                lastError = null
+            )
+            syncStateDao.upsert(newState)
+            entities.size
+        } catch (e: Exception) {
+            val now = System.currentTimeMillis()
+            val cur = syncStateDao.get() ?: SyncStateEntity(
+                id = 0, lastSyncAt = now, listadoEtag = null,
+                listadoLastModified = null, listadoSize = 0,
+                totalDirectories = 0, newDirectoriesLastSync = 0,
+                removedDirectoriesLastSync = 0, lastError = null
+            )
+            syncStateDao.upsert(cur.copy(lastSyncAt = now, lastError = e.message ?: e.toString()))
+            -1
+        }
+    }
 
     // ---------------- Layer 1: directory tree ----------------
 

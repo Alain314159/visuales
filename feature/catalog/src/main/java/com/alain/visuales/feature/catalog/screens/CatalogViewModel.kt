@@ -282,9 +282,8 @@ class CatalogViewModel @Inject constructor(
     }
 
     /**
-     * Pull-to-refresh on Home: clears the expired entry cache and re-fetches each
-     * top-level section's contents. The full listado.html sync is left to the
-     * `ListadoSyncWorker` (WorkManager) — this only refreshes the Layer-2 listings.
+     * Pull-to-refresh on Home: clears the expired entry cache and triggers
+     * a direct sync of listado.html (bypasses WorkManager).
      */
     fun triggerHomeRefresh() {
         if (_isRefreshing.value) return
@@ -292,12 +291,23 @@ class CatalogViewModel @Inject constructor(
             _isRefreshing.value = true
             try {
                 repo.clearExpiredCache()
-                topLevel.value.forEach { dir ->
-                    runCatching {
-                        repo.fetchDirectoryContents(dir.path, dir.url, forceRefresh = true)
-                            .collect { /* drain */ }
-                    }
-                }
+                repo.syncNow()
+            } finally {
+                _isRefreshing.value = false
+            }
+        }
+    }
+
+    /**
+     * Direct sync of listado.html — called on first launch after onboarding.
+     * Bypasses WorkManager entirely to avoid network constraint issues.
+     */
+    fun triggerInitialSync() {
+        if (_isRefreshing.value) return
+        viewModelScope.launch {
+            _isRefreshing.value = true
+            try {
+                repo.syncNow()
             } finally {
                 _isRefreshing.value = false
             }
