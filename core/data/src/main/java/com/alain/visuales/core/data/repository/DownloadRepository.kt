@@ -104,16 +104,27 @@ class DownloadRepository @Inject constructor(
     suspend fun enqueueBatch(items: List<EnqueueItem>): List<String> {
         val ids = mutableListOf<String>()
         for (item in items) {
-            val id = enqueue(
+            // Build entity directly to avoid N pumpQueue() calls inside the loop.
+            val id = "dl_" + System.currentTimeMillis() + "_" + UUID.randomUUID().toString().take(8)
+            val safeName = sanitizeFilename(item.name)
+            val entity = DownloadEntity(
+                id = id,
                 url = item.url,
+                localPath = safeName,
                 name = item.name,
                 size = item.size,
-                subtitleUrl = item.subtitleUrl,
+                status = DownloadStatus.QUEUED.name,
+                priority = DownloadPriority.NORMAL.name,
+                createdAt = System.currentTimeMillis(),
                 section = item.section,
+                subtitleUrl = item.subtitleUrl,
                 posterUrl = item.posterUrl
             )
+            downloadDao.upsert(entity)
             ids.add(id)
         }
+        // Pump once after the whole batch is queued.
+        pumpQueue()
         return ids
     }
 
@@ -138,6 +149,12 @@ class DownloadRepository @Inject constructor(
     suspend fun cancel(id: String) {
         downloadDao.setStatus(id, DownloadStatus.CANCELLED.name)
         chunkDao.deleteChunks(id)
+        // Clean up the .partial file left by MultiThreadDownloader.
+        val dl = downloadDao.getById(id)
+        if (dl != null) {
+            val partialFile = File(getDownloadDir(), sanitizeFilename(dl.name) + ".partial")
+            if (partialFile.exists()) partialFile.delete()
+        }
     }
 
     suspend fun remove(id: String, deleteFile: Boolean = false) {
@@ -218,7 +235,12 @@ class DownloadRepository @Inject constructor(
                     connections = connections,
                     resumePositions = resumePositions,
                     callback = object : DownloadProgressCallback {
+                        private var lastUpdateAt = 0L
                         override fun onProgress(bytesDownloaded: Long, totalBytes: Long, speedBytesPerSec: Long) {
+                            val now = System.currentTimeMillis()
+                            // Throttle to one DB write per 500 ms (matches MultiThreadDownloader sampling).
+                            if (now - lastUpdateAt < 500) return
+                            lastUpdateAt = now
                             val progress = if (totalBytes > 0) ((bytesDownloaded * 100) / totalBytes).toInt() else 0
                             scope.launch {
                                 downloadDao.updateProgress(dl.id, progress, bytesDownloaded)
