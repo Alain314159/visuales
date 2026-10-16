@@ -114,7 +114,6 @@ androidx-room-testing = { group = "androidx.room", name = "room-testing", versio
 androidx-arch-core-testing = { group = "androidx.arch.core", name = "core-testing", version = "2.2.0" }
 kotlinx-coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "coroutines" }
 androidx-work-testing = { group = "androidx.work", name = "work-testing", version.ref = "workManager" }
-jsoup = { group = "org.jsoup", name = "jsoup", version.ref = "jsoup" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
