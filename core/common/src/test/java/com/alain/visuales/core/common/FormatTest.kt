@@ -51,7 +51,9 @@ class FormatTest {
     @Test
     fun `formatBytes handles typical movie sizes`() {
         assertThat(formatBytes(700L * 1024 * 1024)).isEqualTo("700 MB")
-        assertThat(formatBytes(1400L * 1024 * 1024)).isEqualTo("1.4 GB")
+        // 1500 MB = 1.46 GB → rounds to "1.46 GB"
+        assertThat(formatBytes(1500L * 1024 * 1024)).isEqualTo("1.46 GB")
+        // 4 GB exactly
         assertThat(formatBytes(4L * 1024 * 1024 * 1024)).isEqualTo("4 GB")
     }
 
