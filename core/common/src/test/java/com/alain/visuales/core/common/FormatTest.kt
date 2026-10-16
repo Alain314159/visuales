@@ -23,16 +23,16 @@ class FormatTest {
 
     @Test
     fun `formatBytes returns KB for values between 1KB and 1MB`() {
-        assertThat(formatBytes(1024)).isEqualTo("1 KB")
-        assertThat(formatBytes(1536)).isEqualTo("1.5 KB")
-        assertThat(formatBytes(10240)).isEqualTo("10 KB")
+        assertThat(formatBytes(1024L)).isEqualTo("1 KB")
+        assertThat(formatBytes(1536L)).isEqualTo("1.5 KB")
+        assertThat(formatBytes(10240L)).isEqualTo("10 KB")
     }
 
     @Test
     fun `formatBytes returns MB for values between 1MB and 1GB`() {
-        assertThat(formatBytes(1024 * 1024)).isEqualTo("1 MB")
-        assertThat(formatBytes(1024 * 1024 * 1.5.toInt())).isEqualTo("1.5 MB")
-        assertThat(formatBytes(10 * 1024 * 1024)).isEqualTo("10 MB")
+        assertThat(formatBytes(1024 * 1024L)).isEqualTo("1 MB")
+        assertThat(formatBytes((1024 * 1024 * 1.5).toLong())).isEqualTo("1.5 MB")
+        assertThat(formatBytes(10 * 1024 * 1024L)).isEqualTo("10 MB")
     }
 
     @Test
