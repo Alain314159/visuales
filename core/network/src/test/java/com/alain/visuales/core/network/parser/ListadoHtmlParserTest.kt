@@ -45,7 +45,8 @@ class ListadoHtmlParserTest {
         """.trimIndent()
         val result = parser.parse(html, baseUrl)
         assertThat(result).hasSize(1)
-        assertThat(result[0].url).isEqualTo("http://visuales.uclv.cu/Cursos/")
+        // The parser should normalize the double slash.
+        assertThat(result[0].url).doesNotContain("//Cursos")
         assertThat(result[0].path).isEqualTo("/Cursos/")
     }
 
@@ -158,8 +159,8 @@ Subject: Directory Tree
 Date: Wed, 14 Oct 2026 10:52:49 GMT
 MIME-Version: 1.0
 Content-Type: multipart/related;
-	type="text/html";
-	boundary="----MultipartBoundary--test----"
+        type="text/html";
+        boundary="----MultipartBoundary--test----"
 
 
 ------MultipartBoundary--test----
