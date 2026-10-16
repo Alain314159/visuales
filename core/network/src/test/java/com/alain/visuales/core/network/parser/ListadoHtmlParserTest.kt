@@ -38,9 +38,10 @@ class ListadoHtmlParserTest {
     @Test
     fun `parse normalizes double slash in URLs`() {
         // The visuales server returns URLs with double slash after domain.
+        // Use the same protocol as baseUrl (https) to avoid protocol mismatch filtering.
         val html = """
             <html><body>
-            <a href="http://visuales.uclv.cu//Cursos/">Cursos</a>
+            <a href="https://visuales.uclv.cu//Cursos/">Cursos</a>
             </body></html>
         """.trimIndent()
         val result = parser.parse(html, baseUrl)
