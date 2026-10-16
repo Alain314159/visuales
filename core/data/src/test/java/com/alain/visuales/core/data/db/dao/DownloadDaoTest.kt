@@ -99,7 +99,7 @@ class DownloadDaoTest {
     @Test
     fun `setStatusAndError updates status and error`() = runTest {
         dao.upsert(makeDownload())
-        dao.setStatusAndError("dl_1", DownloadStatus.FAILED, "Network timeout")
+        dao.setStatusAndError("dl_1", DownloadStatus.FAILED.name, "Network timeout")
         val fetched = dao.getById("dl_1")!!
         assertThat(fetched.status).isEqualTo(DownloadStatus.FAILED.name)
         assertThat(fetched.error).isEqualTo("Network timeout")
@@ -109,7 +109,7 @@ class DownloadDaoTest {
     fun `setStatusAndCompletedAt updates status and completedAt`() = runTest {
         dao.upsert(makeDownload())
         val now = System.currentTimeMillis()
-        dao.setStatusAndCompletedAt("dl_1", DownloadStatus.COMPLETED, now)
+        dao.setStatusAndCompletedAt("dl_1", DownloadStatus.COMPLETED.name, now)
         val fetched = dao.getById("dl_1")!!
         assertThat(fetched.status).isEqualTo(DownloadStatus.COMPLETED.name)
         assertThat(fetched.completedAt).isEqualTo(now)

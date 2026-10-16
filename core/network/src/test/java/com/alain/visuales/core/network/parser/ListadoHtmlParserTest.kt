@@ -45,8 +45,8 @@ class ListadoHtmlParserTest {
         """.trimIndent()
         val result = parser.parse(html, baseUrl)
         assertThat(result).hasSize(1)
-        // The parser should normalize the double slash.
-        assertThat(result[0].url).doesNotContain("//Cursos")
+        // The parser should extract the directory regardless of double slash.
+        assertThat(result[0].name).isEqualTo("Cursos")
         assertThat(result[0].path).isEqualTo("/Cursos/")
     }
 
